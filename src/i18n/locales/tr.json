@@ -1,0 +1,683 @@
+{
+  "app": {
+    "name": "Pasific",
+    "tagline": "İngilizce yazma becerisi, özenle değerlendirilir.",
+    "developedBy": "Ethosoft tarafından geliştirilmiştir"
+  },
+  "common": {
+    "loading": "Yükleniyor…",
+    "save": "Kaydet",
+    "cancel": "Vazgeç",
+    "close": "Kapat",
+    "back": "Geri",
+    "next": "İleri",
+    "continue": "Devam et",
+    "submit": "Gönder",
+    "confirm": "Onayla",
+    "delete": "Sil",
+    "edit": "Düzenle",
+    "duplicate": "Kopyala",
+    "hide": "Gizle",
+    "restore": "Geri getir",
+    "archive": "Arşivle",
+    "search": "Ara",
+    "filter": "Filtrele",
+    "filters": "Filtreler",
+    "all": "Tümü",
+    "viewAll": "Tümünü gör",
+    "seeDetails": "Detayları gör",
+    "export": "Dışa aktar",
+    "exportPdf": "PDF olarak indir",
+    "download": "İndir",
+    "optional": "İsteğe bağlı",
+    "required": "Zorunlu",
+    "recommended": "Önerilen",
+    "min": "En az",
+    "max": "En çok",
+    "words": "kelime",
+    "minutes": "dk",
+    "today": "Bugün",
+    "yesterday": "Dün",
+    "student": "Öğrenci",
+    "teacher": "Öğretmen",
+    "admin": "Ethosoft Yöneticisi",
+    "email": "E-posta",
+    "school": "Okul",
+    "class": "Sınıf",
+    "level": "Seviye",
+    "score": "Puan",
+    "status": "Durum",
+    "actions": "İşlemler",
+    "yes": "Evet",
+    "no": "Hayır",
+    "and": "ve",
+    "developmentTool": "Geliştirme aracı",
+    "logout": "Çıkış yap",
+    "comingSoon": "Bu ekran hazırlanıyor."
+  },
+  "a11y": {
+    "skipToContent": "İçeriğe geç",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "toggleSidebar": "Kenar çubuğunu daralt/genişlet",
+    "userMenu": "Hesap menüsü"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Açık",
+    "dark": "Koyu",
+    "system": "Sistem"
+  },
+  "language": {
+    "label": "Dil",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "nav": {
+    "student": {
+      "home": "Ana Sayfa",
+      "assignments": "Ödevler",
+      "practice": "Pratik",
+      "catalog": "Katalog",
+      "examples": "Örnek Kütüphanesi",
+      "portfolio": "Portfolyo",
+      "settings": "Profil"
+    },
+    "teacher": {
+      "dashboard": "Panel",
+      "classes": "Sınıflar",
+      "assignments": "Ödevler",
+      "catalog": "Katalog",
+      "reports": "Raporlar",
+      "school": "Okul",
+      "team": "Ekip",
+      "settings": "Ayarlar",
+      "menu": "Menü"
+    },
+    "admin": {
+      "dashboard": "Panel",
+      "schools": "Okullar",
+      "users": "Kullanıcılar",
+      "teachers": "Öğretmenler",
+      "students": "Öğrenciler",
+      "activationCodes": "Aktivasyon Kodları",
+      "catalog": "Genel Katalog",
+      "writingTypes": "Yazı Türleri",
+      "levels": "CEFR Seviyeleri",
+      "rubrics": "Rubrikler",
+      "auditLog": "Denetim Kaydı",
+      "settings": "Ayarlar"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Pasific'e giriş yap",
+      "subtitle": "İngilizce yazma pratiği ve değerlendirmesi.",
+      "username": "Kullanıcı adı",
+      "password": "Şifre",
+      "showPassword": "Şifreyi göster",
+      "hidePassword": "Şifreyi gizle",
+      "rememberMe": "Beni hatırla",
+      "submit": "Giriş yap",
+      "activateAccount": "Hesap aktive et",
+      "forgotPassword": "Şifremi unuttum",
+      "invalidCredentials": "Kullanıcı adı veya şifre hatalı.",
+      "devRoleSwitch": "Demo: rol değiştir",
+      "demoHint": "Bu bir demo ortamıdır — bu hesaplar için herhangi bir şifre çalışır."
+    },
+    "activate": {
+      "title": "Hesabını aktive et",
+      "step1Title": "Aktivasyon kodunu gir",
+      "step1Description": "Öğretmenin veya okulun, sınıfınla ilişkilendirilmiş bir aktivasyon kodu verdi.",
+      "code": "Aktivasyon kodu",
+      "codePlaceholder": "örn. PSFC-2K9X-771A",
+      "validateCode": "Kodu doğrula",
+      "codeInvalid": "Bu aktivasyon kodu bulunamadı. Kontrol edip tekrar dene.",
+      "codeExpired": "Bu aktivasyon kodunun süresi dolmuş. Öğretmeninden yeni bir kod iste.",
+      "codeUsed": "Bu aktivasyon kodu daha önce kullanılmış.",
+      "linkedTo": "Bu kod şununla ilişkilendirildi:",
+      "step2Title": "Hesabını oluştur",
+      "chooseUsername": "Bir kullanıcı adı seç",
+      "usernameTaken": "Bu kullanıcı adı zaten alınmış.",
+      "choosePassword": "Bir şifre oluştur",
+      "confirmPassword": "Şifreyi onayla",
+      "passwordWeak": "Şifre en az 8 karakter olmalı ve bir harf ile bir rakam içermelidir.",
+      "passwordMismatch": "Şifreler eşleşmiyor.",
+      "recoveryTitle": "Kurtarma bilgileri (isteğe bağlı)",
+      "recoveryDescription": "Şifreni unutursan hesabını kurtarabilmen için e-posta veya telefon numarası ekleyebilirsin. Bu adımı atlayabilirsin.",
+      "email": "E-posta adresi",
+      "emailInvalid": "Geçerli bir e-posta adresi gir.",
+      "phone": "Telefon numarası",
+      "phoneInvalid": "Geçerli bir telefon numarası gir.",
+      "termsLabel": "Pasific gizlilik bildirimini ve hesap koşullarını kabul ediyorum.",
+      "termsRequired": "Devam etmek için koşulları kabul etmelisin.",
+      "activate": "Hesabı aktive et",
+      "successTitle": "Hesap aktive edildi",
+      "successDescription": "Hesabın hazır. Panele yönlendiriliyorsun…",
+      "goToDashboard": "Panele git"
+    },
+    "forgotPassword": {
+      "title": "Şifreni sıfırla",
+      "subtitle": "Hesabına erişimi nasıl kurtarmak istediğini seç.",
+      "byEmail": "E-posta ile kurtar",
+      "byPhone": "Telefon numarasıyla kurtar",
+      "askTeacher": "Öğretmeninden geçici şifre iste",
+      "askTeacherDescription": "Öğretmenin senin için geçici bir şifre oluşturabilir. Bir sonraki girişte yeni bir şifre belirlemen istenecek.",
+      "identifier": "Kullanıcı adı",
+      "sendCode": "Kurtarma kodu gönder",
+      "noRecoveryTitle": "Kayıtlı kurtarma bilgisi yok",
+      "noRecoveryDescription": "Bu hesapta kayıtlı bir kurtarma e-postası veya telefon numarası yok. Şifreni sıfırlaması için öğretmeninden yardım iste.",
+      "checkInbox": "Eşleşen bir hesap varsa kurtarma kodu gönderildi.",
+      "backToLogin": "Girişe dön"
+    }
+  },
+  "roles": {
+    "student": "Öğrenci",
+    "teacher": "Öğretmen",
+    "school_admin": "Okul Yöneticisi",
+    "super_admin": "Ethosoft Süper Yöneticisi"
+  },
+  "permission": {
+    "denied": {
+      "title": "Bu işlem için yetkin yok",
+      "description": "Bu bölüme erişimin yok. Bunun bir hata olduğunu düşünüyorsan okul yöneticinle iletişime geç."
+    }
+  },
+  "states": {
+    "empty": {
+      "generic": "Burada henüz bir şey yok."
+    },
+    "error": {
+      "generic": "Bir şeyler ters gitti.",
+      "retry": "Tekrar dene"
+    }
+  },
+  "cefr": {
+    "B1": "B1",
+    "B2": "B2",
+    "C1": "C1",
+    "C2": "C2"
+  },
+  "writingType": {
+    "opinion_essay": "Görüş Denemesi (Opinion Essay)",
+    "argumentative_essay": "Tartışmacı Deneme (Argumentative Essay)",
+    "for_and_against_essay": "Lehte ve Aleyhte Deneme (For and Against Essay)",
+    "advantages_disadvantages_essay": "Avantaj–Dezavantaj Denemesi",
+    "problem_solution_essay": "Problem–Çözüm Denemesi",
+    "cause_effect_essay": "Neden–Sonuç Denemesi",
+    "compare_contrast_essay": "Karşılaştırma Denemesi",
+    "formal_email": "Resmi E-posta",
+    "informal_email": "Gündelik E-posta",
+    "complaint_letter": "Şikayet Mektubu",
+    "application_letter": "Başvuru Mektubu",
+    "article": "Makale",
+    "report": "Rapor",
+    "review": "Değerlendirme (Review)",
+    "narrative_story": "Anlatı Hikayesi",
+    "descriptive_writing": "Betimleyici Yazı",
+    "blog_post": "Blog Yazısı"
+  },
+  "rubric": {
+    "criterion": {
+      "task_fulfilment": { "name": "Görev Yerine Getirme ve Fikir Geliştirme", "description": "Yazının görevi ne kadar eksiksiz karşıladığı ve fikirleri geliştirdiği." },
+      "genre_achievement": { "name": "Tür ve İletişimsel Başarı", "description": "Yazının istenen türün kurallarına ve amacına ne kadar uyduğu." },
+      "organisation_cohesion": { "name": "Organizasyon ve Bağdaşıklık", "description": "Fikirlerin ne kadar net yapılandırıldığı, bağlandığı ve ilerlediği." },
+      "vocabulary_range": { "name": "Kelime Dağarcığı ve Kontrolü", "description": "Kullanılan kelimelerin çeşitliliği, kesinliği ve doğruluğu." },
+      "grammar_mechanics": { "name": "Dilbilgisi, Cümle Yapısı ve Mekanik", "description": "Dilbilgisi doğruluğu, cümle çeşitliliği, noktalama ve yazım." }
+    },
+    "customRubric": "Özel Rubrik",
+    "customRubricWarning": "Bu ödevde kullanılan özel puanlama ayarları nedeniyle sonuçlar standart Pasific puanlarıyla doğrudan karşılaştırılmayabilir.",
+    "aiSuggestedScore": "AI Tarafından Önerilen Puan",
+    "teacherFinalScore": "Öğretmen Nihai Puanı",
+    "weight": "Ağırlık"
+  },
+  "severity": {
+    "critical": { "label": "Kritik", "description": "Anlamı ciddi biçimde değiştirir veya temel bir gereksinimi ihlal eder." },
+    "mistake": { "label": "Hata", "description": "Doğruluğu veya iletişimi zayıflatan belirgin bir hata." },
+    "inaccuracy": { "label": "Küçük Hata", "description": "Anlaşılmayı engellemeyen daha küçük bir sorun." },
+    "info": { "label": "Öneri", "description": "Üslup veya doğallık için isteğe bağlı bir iyileştirme." }
+  },
+  "errorCategoryGroup": {
+    "grammar": "Dilbilgisi",
+    "vocabulary": "Kelime Bilgisi",
+    "organisation": "Organizasyon",
+    "task_genre": "Görev ve Tür"
+  },
+  "errorCategory": {
+    "verb_tense": "Fiil zamanı (Verb tense)",
+    "subject_verb_agreement": "Özne–yüklem uyumu (Subject–Verb Agreement)",
+    "articles": "Article kullanımı",
+    "prepositions": "Edatlar (Prepositions)",
+    "singular_plural": "Tekil/çoğul kullanımı",
+    "pronouns": "Zamirler (Pronouns)",
+    "word_order": "Kelime sırası (Word Order)",
+    "modal_verbs": "Kip fiilleri (Modal Verbs)",
+    "conditionals": "Koşul cümleleri (Conditionals)",
+    "relative_clauses": "İlgi cümlecikleri (Relative Clauses)",
+    "sentence_fragments": "Eksik cümle (Sentence Fragment)",
+    "run_on_sentences": "Bitişik cümle (Run-on Sentence)",
+    "clause_structure": "Cümlecik yapısı (Clause Structure)",
+    "agreement": "Uyum (Agreement)",
+    "auxiliary_verbs": "Yardımcı fiiller (Auxiliary Verbs)",
+    "word_choice": "Kelime seçimi (Word Choice)",
+    "word_form": "Kelime türü (Word Form)",
+    "collocation": "Kelime eşleşmesi (Collocation)",
+    "repetition": "Tekrar (Repetition)",
+    "register": "Dil kaydı (Register)",
+    "informal_language": "Gündelik dil kullanımı",
+    "false_friend": "Yanıltıcı benzer kelime (False Friend)",
+    "spelling": "Yazım (Spelling)",
+    "precision": "Kesinlik (Precision)",
+    "limited_range": "Sınırlı kelime çeşitliliği",
+    "missing_thesis": "Eksik tez cümlesi",
+    "weak_topic_sentence": "Zayıf konu cümlesi",
+    "weak_paragraph_focus": "Zayıf paragraf odağı",
+    "unsupported_idea": "Desteklenmemiş fikir",
+    "repeated_idea": "Tekrarlanan fikir",
+    "incorrect_linking_device": "Yanlış bağlaç kullanımı",
+    "mechanical_cohesion": "Mekanik bağdaşıklık",
+    "missing_conclusion": "Eksik sonuç paragrafı",
+    "unclear_reference": "Belirsiz gönderim",
+    "poor_progression": "Zayıf fikir ilerleyişi",
+    "partially_answered_prompt": "Konuyu kısmen yanıtlama",
+    "off_topic_content": "Konu dışı içerik",
+    "missing_position": "Eksik görüş bildirimi",
+    "inappropriate_register": "Uygunsuz dil kaydı",
+    "missing_required_section": "Eksik gerekli bölüm",
+    "genre_convention_issue": "Tür kuralı sorunu",
+    "insufficient_development": "Yetersiz fikir geliştirme"
+  },
+  "performanceBand": {
+    "developing": "Gelişmekte",
+    "meets_expectations": "Beklentiyi Karşılıyor",
+    "strong": "Güçlü",
+    "advanced": "İleri Düzey"
+  },
+  "catalogSource": {
+    "pasific_library": "Pasific Kütüphanesi",
+    "school_library": "Okul Kütüphanesi",
+    "draft": "Taslağım"
+  },
+  "catalogVisibility": {
+    "global": "Genel",
+    "school": "Yalnızca bu okul",
+    "personal_draft": "Kişisel taslak"
+  },
+  "difficulty": {
+    "developing": "Temel Düzey",
+    "standard": "Standart",
+    "challenging": "Zorlayıcı"
+  },
+  "submissionStatus": {
+    "not_started": "Başlanmadı",
+    "in_progress": "Devam ediyor",
+    "submitted": "Teslim edildi",
+    "analyzing": "Analiz ediliyor",
+    "result_ready": "Sonuç hazır",
+    "teacher_review_pending": "Öğretmen incelemesinde"
+  },
+  "assignmentStatus": {
+    "draft": "Taslak",
+    "published": "Yayınlandı",
+    "closed": "Kapatıldı"
+  },
+  "activationCodeStatus": {
+    "unused": "Kullanılmadı",
+    "used": "Kullanıldı",
+    "expired": "Süresi doldu",
+    "revoked": "İptal edildi"
+  },
+  "accountStatus": {
+    "active": "Aktif",
+    "suspended": "Askıya alındı",
+    "pending_password_reset": "Şifre sıfırlama bekleniyor"
+  },
+  "aiSupportMode": {
+    "none": "Yazım aşamasında AI desteği yok",
+    "critical_alerts_only": "Yalnızca kritik uyarılar",
+    "guided_practice": "Rehberli pratik desteği"
+  },
+  "teacher": {
+    "dashboard": {
+      "activeClasses": "Aktif sınıflar",
+      "awaitingReview": "İncelenecek",
+      "recentSubmissions": "Son gönderilenler",
+      "classAverages": "Ödeve göre sınıf ortalaması",
+      "frequentErrors": "En sık sınıf hata kategorileri",
+      "needsSupport": "Desteğe ihtiyacı olabilecek öğrenciler",
+      "recentAssignments": "Son oluşturulan ödevler",
+      "newAssignment": "Yeni ödev",
+      "reviewCount_one": "İncelenecek {{count}} writing",
+      "reviewCount_other": "İncelenecek {{count}} writing",
+      "activeAssignmentsWeek": "Bu hafta {{count}} aktif ödev"
+    },
+    "classes": {
+      "studentCount": "{{count}} öğrenci",
+      "criterionAverages": "Sınıf kriter ortalamaları",
+      "commonErrors": "Sık görülen hata kategorileri",
+      "searchStudents": "Öğrenci ara…",
+      "lastSubmission": "Son gönderim",
+      "recentScore": "Son puan",
+      "focusArea": "Güncel odak alanı",
+      "resetPassword": "Şifreyi sıfırla",
+      "resetPasswordConfirmTitle": "Geçici şifre oluşturulsun mu?",
+      "resetPasswordConfirmDescription": "Öğrenciden bir sonraki girişte yeni bir şifre belirlemesi istenecek. Mevcut şifresi artık çalışmayacak.",
+      "resetPasswordDone": "Geçici şifre oluşturuldu. Öğrenci bir sonraki girişte şifresini değiştirmelidir."
+    },
+    "assignments": {
+      "createNew": "Yeni ödev",
+      "stepTopic": "Konu",
+      "stepDetails": "Detaylar",
+      "stepAiSupport": "Yazım aşamasında AI desteği",
+      "stepScoring": "Puanlama",
+      "stepReview": "İncele ve yayınla",
+      "chooseFromPasific": "Pasific Kütüphanesinden seç",
+      "chooseFromSchool": "Okul Kütüphanesinden seç",
+      "createNewTopic": "Yeni bir okul konusu oluştur",
+      "title": "Ödev başlığı",
+      "prompt": "Yazı konusu",
+      "writingType": "Yazı türü",
+      "level": "Hedef seviye",
+      "minWords": "En az kelime",
+      "maxWords": "En çok kelime",
+      "dueAt": "Son teslim tarihi ve saati",
+      "timeLimit": "Süre sınırı (dakika, isteğe bağlı)",
+      "classes": "Atanan sınıflar",
+      "instructions": "Talimatlar",
+      "referenceText": "Referans metin (isteğe bağlı, öğrenciler için salt okunur)",
+      "showAiScoreImmediately": "Gönderim sonrası AI puanını hemen göster",
+      "useStandardRubric": "Standart Pasific rubriğini kullan",
+      "weight": "Ağırlık (%)",
+      "totalWeight": "Toplam ağırlık",
+      "totalWeightWarning": "Kriter ağırlıkları toplamda %100 olmalıdır.",
+      "addCriterion": "Ödeve özel kriter ekle",
+      "restoreStandard": "Standart rubriği geri getir",
+      "disableCriterion": "Devre dışı bırak",
+      "enableCriterion": "Etkinleştir",
+      "publish": "Ödevi yayınla",
+      "saveDraft": "Taslak olarak kaydet",
+      "reviewTitle": "Yayınlamadan önce incele",
+      "noAssignments": "Henüz ödev yok",
+      "resultsTitle": "Gönderimler",
+      "avgScore": "Ortalama puan",
+      "submittedCount": "Teslim edildi",
+      "notStartedCount": "Başlanmadı"
+    },
+    "review": {
+      "aiReasoning": "AI gerekçesi",
+      "teacherFeedback": "Öğretmen geri bildirimi",
+      "feedbackPlaceholder": "Öğrenci için geri bildirim yaz…",
+      "overrideReason": "Değişiklik nedeni",
+      "publish": "Sonucu yayınla",
+      "saveDraft": "Taslak olarak kaydet",
+      "publishedNote": "Bu sonuç öğrenciye yayınlandı.",
+      "draftNote": "Bu inceleme taslak olarak kaydedildi ve henüz öğrenciye görünmüyor.",
+      "previousWork": "Önceki yazı sonuçları",
+      "acceptAiScore": "AI puanını kabul et"
+    },
+    "catalog": {
+      "tabPasific": "Pasific Kütüphanesi",
+      "tabSchool": "Okul Kütüphanesi",
+      "tabHidden": "Bu Okulda Gizli",
+      "tabDrafts": "Taslaklar",
+      "assign": "Ata",
+      "preview": "Önizle",
+      "duplicateForSchool": "Okul için kopyala",
+      "hideForSchool": "Okul için gizle",
+      "restoreForSchool": "Geri getir",
+      "archive": "Arşivle",
+      "deleteConfirmTitle": "Bu konu silinsin mi?",
+      "deleteConfirmDescription": "Bu okula özel konu kalıcı olarak kaldırılacak.",
+      "hideConfirmTitle": "Bu konu okulunuz için gizlensin mi?",
+      "hideConfirmDescription": "Okulunuzdaki öğrenciler ve öğretmenler bu Pasific Kütüphanesi konusunu artık görmeyecek. İstediğiniz zaman geri getirebilirsiniz.",
+      "newTopic": "Yeni okul konusu"
+    },
+    "reports": {
+      "classReport": "Sınıf raporu",
+      "selectClass": "Bir sınıf seç",
+      "selectAssignment": "Bir ödev seç"
+    },
+    "school": {
+      "name": "Okul adı",
+      "city": "Şehir",
+      "planStatus": "Plan durumu"
+    },
+    "team": {
+      "permissions": "Yetkiler",
+      "title": "Öğretmen Ekibi"
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "totalSchools": "Okullar",
+      "totalTeachers": "Öğretmenler",
+      "totalStudents": "Öğrenciler",
+      "activeAssignments": "Aktif ödevler",
+      "recentSchools": "Son aktif okullar",
+      "schoolUsageSummary": "Okul kullanım özeti",
+      "flaggedInconsistencies": "İşaretlenen puanlama tutarsızlıkları"
+    },
+    "schools": {
+      "create": "Okul oluştur",
+      "name": "Okul adı",
+      "city": "Şehir",
+      "status": "Durum",
+      "suspend": "Okulu askıya al",
+      "reactivate": "Okulu yeniden etkinleştir",
+      "suspendConfirmTitle": "Bu okul askıya alınsın mı?",
+      "suspendConfirmDescription": "Bu okuldaki öğretmenler ve öğrenciler, yeniden etkinleştirilene kadar erişimlerini kaybedecek.",
+      "planStatus": "Plan durumu",
+      "openSchool": "Okulu aç",
+      "classes": "Sınıflar",
+      "teachers": "Öğretmenler",
+      "students": "Öğrenciler"
+    },
+    "users": {
+      "createTeacher": "Öğretmen hesabı oluştur",
+      "assignSchool": "Okula ata",
+      "assignClasses": "Sınıflara ata",
+      "permissions": "Yetkiler",
+      "suspendAccount": "Hesabı askıya al",
+      "reactivateAccount": "Hesabı yeniden etkinleştir"
+    },
+    "codes": {
+      "createBatch": "Aktivasyon kodu grubu oluştur",
+      "school": "Okul",
+      "class": "Sınıf",
+      "count": "Kod sayısı",
+      "expiresAt": "Son kullanma tarihi",
+      "generate": "Kodları oluştur",
+      "revoke": "İptal et",
+      "revokeConfirmTitle": "Bu aktivasyon kodu iptal edilsin mi?",
+      "revokeConfirmDescription": "Öğrenciler bu kodu hesap aktive etmek için artık kullanamayacak.",
+      "exportSheet": "Yazdırılabilir sayfa olarak indir",
+      "code": "Kod",
+      "batch": "Grup"
+    },
+    "catalog": {
+      "addGlobalTopic": "Genel konu ekle",
+      "promoteFromSchool": "Okul tarafından önerilen konular",
+      "promote": "Genel kütüphaneye yayınla"
+    },
+    "writingTypes": {
+      "addNew": "Yazı türü ekle",
+      "namePlaceholder": "Yeni yazı türü adı"
+    },
+    "levels": {
+      "descriptorsFor": "{{level}} için tanımlayıcılar"
+    },
+    "rubrics": {
+      "standardVersion": "Standart rubrik sürümü",
+      "aiModelVersion": "AI model sürümü (yer tutucu)",
+      "overrideStats": "Öğretmen değişiklik istatistikleri",
+      "avgOverride": "Ortalama değişiklik",
+      "overrideFrequency": "Değişiklik sıklığı"
+    },
+    "auditLog": {
+      "allTypes": "Tüm olay türleri",
+      "actor": "Aktör",
+      "target": "Hedef"
+    },
+    "settings": {
+      "platformName": "Platform adı",
+      "defaultLanguage": "Varsayılan dil",
+      "maintenanceMode": "Bakım modu"
+    }
+  },
+  "settings": {
+    "account": "Hesap",
+    "username": "Kullanıcı adı",
+    "school": "Okul",
+    "class": "Sınıf",
+    "recovery": "Kurtarma bilgileri",
+    "noRecoveryEmail": "Kayıtlı kurtarma e-postası yok",
+    "noRecoveryPhone": "Kayıtlı kurtarma telefon numarası yok",
+    "preferences": "Tercihler",
+    "language": "Dil",
+    "theme": "Tema"
+  },
+  "portfolio": {
+    "history": "Yazı geçmişi",
+    "scoreTrendChart": "Zaman içinde puan gelişimi",
+    "errorFrequencyChart": "En sık hata kategorileri",
+    "writingTypeChart": "Çalışılan yazı türleri",
+    "assignmentSource": "Ödev",
+    "practiceSource": "Bağımsız pratik",
+    "customRubricNote": "Özel rubrik sonuçları ayrıca gösterilir ve gelişim grafiklerine dahil edilmez.",
+    "filterSource": "Kaynak"
+  },
+  "practice": {
+    "newTitle": "Yeni Writing Çalışması",
+    "step1": "Bir yazı türü ve seviye seç",
+    "step2": "Bir konu seç",
+    "step3": "Seçenekler",
+    "writingType": "Yazı türü",
+    "level": "Seviye",
+    "topic": "Konu",
+    "chooseTopicPlaceholder": "Bir konu seç…",
+    "timer": "İsteğe bağlı süre",
+    "enableTimer": "Süre sınırı belirle",
+    "minutes": "dakika",
+    "start": "Yazmaya başla",
+    "empty": "Henüz bağımsız pratik yok",
+    "emptyDescription": "Atanan görevler dışında kendi portfolyonu oluşturmak için yeni bir writing pratiği başlat.",
+    "guidedAssistance": "Rehberli destek",
+    "guidedAssistanceHint": "Bir ipucu iste — Pasific seni hazır bir cümle yerine bir soruyla yönlendirir.",
+    "askForHint": "İpucu iste",
+    "correctionStyle": "Düzeltme tarzı",
+    "correctionHint": "Önce ipucu",
+    "correctionExplanation": "Önce açıklama",
+    "correctionAttempt": "Denememden sonra düzeltmeyi göster"
+  },
+  "examples": {
+    "performanceFilter": "Performans düzeyi",
+    "strongPoints": "Güçlü yönler",
+    "weakPoints": "Gelişim alanları",
+    "whyThisScore": "Bu yazı neden bu puanı aldı",
+    "noResults": "Filtrelerinle eşleşen örnek yazı yok"
+  },
+  "catalog": {
+    "searchPlaceholder": "Konu ara…",
+    "levelFilter": "Seviye",
+    "typeFilter": "Yazı türü",
+    "noResults": "Filtrelerinle eşleşen konu yok",
+    "noResultsDescription": "Farklı bir seviye, yazı türü veya arama terimi dene.",
+    "learningObjectives": "Öğrenme hedefleri",
+    "genreExpectations": "Tür beklentileri",
+    "planningQuestions": "Planlama soruları",
+    "relatedExamples": "İlgili örnek yazılar",
+    "startFromTopic": "Bu konuyu pratik yap",
+    "scopeNote": "Bu değişiklik yalnızca kendi okulunuzda geçerlidir."
+  },
+  "annotatedText": {
+    "addToStudyList": "Çalışma listeme ekle",
+    "addedToStudyList": "Çalışma listesine eklendi",
+    "tabs": {
+      "annotated": "İşaretlenmiş Metin",
+      "scoreBreakdown": "Puan Dökümü",
+      "studyRecommendations": "Çalışma Önerileri",
+      "teacherFeedback": "Öğretmen Geri Bildirimi"
+    },
+    "filterAll": "Tümü",
+    "selectAnnotationHint": "Detayları görmek için işaretli bir ifadeye dokun.",
+    "noAnnotations": "Bu kategoride işaretlenmiş bir sorun yok."
+  },
+  "editor": {
+    "autosave": {
+      "saving": "Kaydediliyor…",
+      "saved": "Kaydedildi",
+      "offline": "Bağlantı bekleniyor",
+      "retrying": "Yeniden deneniyor…",
+      "failed": "Kaydetme başarısız"
+    },
+    "lastSaved": "Son kayıt {{time}}",
+    "fullscreen": "Tam ekran mod",
+    "exitFullscreen": "Tam ekrandan çık",
+    "placeholder": "Yazmaya buradan başla…",
+    "simulateOffline": "Bağlantı kaybını simüle et",
+    "backOnline": "Tekrar çevrimiçi",
+    "submit": "Gönder",
+    "confirmTitle": "Bu yazı gönderilsin mi?",
+    "confirmPoint1": "Bu, bu ödev için resmi teslimin olacak.",
+    "confirmPoint2": "Daha sonra düzenleyemeyeceksin.",
+    "confirmPoint3": "Bu beceriyi ayrıca pratik yapabilirsin — bağımsız pratik bu sonucun yerini almaz.",
+    "confirmSubmit": "Evet, gönder",
+    "practiseAgain": "Tekrar pratik yap",
+    "submittedTitle": "Teslim alındı",
+    "submittedDescription": "Yazın gönderildi ve şu anda analiz bekliyor.",
+    "backToAssignments": "Ödevlere dön",
+    "wordCountBelowMin": "Yazın önerilen en az kelime sayısının altında.",
+    "wordCountAboveMax": "Yazın önerilen en çok kelime sayısının üzerinde."
+  },
+  "student": {
+    "assignment": {
+      "prompt": "Yazı konusu",
+      "instructions": "Talimatlar",
+      "rubricPreview": "Puanlama kriterleri",
+      "referenceText": "Referans metin",
+      "wordRange": "Kelime sayısı",
+      "timeLimit": "Süre sınırı",
+      "due": "Son teslim",
+      "aiSupport": "Yazım sırasında AI desteği",
+      "startWriting": "Yazmaya başla",
+      "continueWriting": "Yazmaya devam et",
+      "viewResult": "Sonucu görüntüle"
+    },
+    "home": {
+      "greeting": "Merhaba, {{name}}",
+      "assignedTasks": "Atanan ödevler",
+      "noAssignedTasks": "Henüz ödev yok",
+      "noAssignedTasksDescription": "Öğretmenin sınıfın için bir ödev yayınladığında burada görünecek.",
+      "recentPerformance": "Son performans",
+      "noRecentPerformance": "Henüz sonuç yok",
+      "noRecentPerformanceDescription": "Sonuçlarını burada görmek için ilk ödevini veya pratik yazını tamamla.",
+      "mainDevelopmentArea": "Güncel odak alanı",
+      "portfolioSummary": "Portfolyo özeti",
+      "newPractice": "Yeni Writing Çalışması",
+      "newPracticeDescription": "Bağımsız pratik yapmak için bir yazı türü, seviye ve konu seç.",
+      "viewPortfolio": "Portfolyoyu görüntüle"
+    },
+    "portfolio": {
+      "totalCompleted": "Tamamlanan yazılar",
+      "typesPractised": "Çalışılan yazı türleri",
+      "scoreTrend": "Puan gelişimi",
+      "topErrors": "En sık hata kategorileri",
+      "filters": "Filtreler",
+      "noData": "Bu filtrelerle eşleşen tamamlanmış bir yazı henüz yok."
+    }
+  },
+  "studyRec": {
+    "repetitionReason": "Bu kelime veya ifade sık sık tekrarlandı ve yazının çeşitliliğini azalttı.",
+    "repetitionExplanation": "Aynı kelimeyi tekrarlamak yerine eş anlamlı kelimeler veya zamirler kullanmak, yazını daha doğal gösterir ve daha geniş bir kelime dağarcığı ortaya koyar.",
+    "svaReason": "Bu yapı {{count}} kez tekrarlandı ve zaman zaman cümle doğruluğunu etkiledi.",
+    "svaExplanation": "Geniş zamanda (present simple) fiiller he/she/it ile \"-s\" takısı alır; \"people\" kelimesi ise zaten çoğuldur ve çoğul fiil ister.",
+    "lesson": {
+      "synonymRange": "Kelime dağarcığını genişletmek",
+      "sva": "Subject–Verb Agreement (Özne-Yüklem Uyumu)"
+    },
+    "exercise": {
+      "synonymSwap": "Eş anlamlı kelime değişimi: beş cümleyi yeniden yaz",
+      "svaEightQuestions": "Sekiz sorudan oluşan pratik alıştırma"
+    }
+  }
+}

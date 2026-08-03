@@ -1,0 +1,58 @@
+import type { AuditEvent } from '../types/entities';
+
+export const AUDIT_EVENTS: AuditEvent[] = [
+  {
+    id: 'audit_1',
+    type: 'score_override',
+    actorId: 'teacher_elif_yilmaz',
+    actorName: 'Elif Yılmaz',
+    targetLabel: 'Barış Öztürk — Social Media: Help or Harm?',
+    timestamp: '2026-07-30T11:16:00+03:00',
+    detail: 'Task Fulfilment 15→16, Grammar & Mechanics 15→17.',
+  },
+  {
+    id: 'audit_2',
+    type: 'score_override',
+    actorId: 'teacher_zeynep_kara',
+    actorName: 'Zeynep Kara',
+    targetLabel: 'Leyla Bulut — Plastic Pollution: Causes and Solutions',
+    timestamp: '2026-07-25T09:30:00+03:00',
+    detail: 'Organisation & Cohesion 15→17.',
+  },
+  {
+    id: 'audit_3',
+    type: 'catalog_hidden',
+    actorId: 'teacher_mert_aydin',
+    actorName: 'Mert Aydın',
+    targetLabel: 'Application Letter for a Summer Programme (global topic)',
+    timestamp: '2026-06-01T10:00:00+03:00',
+    detail: 'Hidden for Bahçelievler Fen Lisesi — replaced with a school-specific alternative.',
+  },
+  {
+    id: 'audit_4',
+    type: 'activation_code_revoked',
+    actorId: 'teacher_mert_aydin',
+    actorName: 'Mert Aydın',
+    targetLabel: 'PSFC-VV55-10CM (11-B)',
+    timestamp: '2026-06-15T13:00:00+03:00',
+    detail: 'Code printed on paper was lost before distribution; revoked as a precaution.',
+  },
+  {
+    id: 'audit_5',
+    type: 'password_reset',
+    actorId: 'teacher_elif_yilmaz',
+    actorName: 'Elif Yılmaz',
+    targetLabel: 'Ege Polat',
+    timestamp: '2026-08-01T09:00:00+03:00',
+    detail: 'Temporary password issued; student must change password at next login.',
+  },
+  {
+    id: 'audit_6',
+    type: 'teacher_permission_changed',
+    actorId: 'admin_selin_koray',
+    actorName: 'Selin Koray',
+    targetLabel: 'Zeynep Kara',
+    timestamp: '2025-10-05T08:10:00+03:00',
+    detail: 'Assigned limited permission set (create_assignments, view_own_class_results) for intern teacher onboarding.',
+  },
+];

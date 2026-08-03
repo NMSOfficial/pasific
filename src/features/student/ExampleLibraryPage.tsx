@@ -1,0 +1,62 @@
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { useMockState } from '../../mock/useMockStore';
+import type { CefrLevel, PerformanceBand } from '../../types/entities';
+import { PageHeader } from '../../components/PageHeader';
+import { CefrLevelBadge } from '../../components/CefrLevelBadge';
+import { WritingTypeBadge } from '../../components/WritingTypeBadge';
+import { EmptyState } from '../../components/EmptyState';
+
+const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
+const BANDS: PerformanceBand[] = ['developing', 'meets_expectations', 'strong', 'advanced'];
+
+export function ExampleLibraryPage() {
+  const { t } = useTranslation();
+  const state = useMockState();
+  const [level, setLevel] = useState<CefrLevel | 'all'>('all');
+  const [band, setBand] = useState<PerformanceBand | 'all'>('all');
+
+  const examples = useMemo(() => {
+    return state.examples
+      .filter((e) => level === 'all' || e.level === level)
+      .filter((e) => band === 'all' || e.performanceBand === band);
+  }, [state.examples, level, band]);
+
+  return (
+    <>
+      <PageHeader title={t('nav.student.examples')} />
+
+      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginBottom: 'var(--space-5)' }}>
+        <select className="select-control" style={{ width: 'auto' }} value={level} onChange={(e) => setLevel(e.target.value as CefrLevel | 'all')} aria-label={t('catalog.levelFilter')}>
+          <option value="all">{t('common.all')} — {t('catalog.levelFilter')}</option>
+          {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+        </select>
+        <select className="select-control" style={{ width: 'auto' }} value={band} onChange={(e) => setBand(e.target.value as PerformanceBand | 'all')} aria-label={t('examples.performanceFilter')}>
+          <option value="all">{t('common.all')} — {t('examples.performanceFilter')}</option>
+          {BANDS.map((b) => <option key={b} value={b}>{t(`performanceBand.${b}`)}</option>)}
+        </select>
+      </div>
+
+      {examples.length === 0 ? (
+        <EmptyState title={t('examples.noResults')} />
+      ) : (
+        <div className="card-grid">
+          {examples.map((example) => (
+            <div key={example.id} className="card card--padded catalog-card">
+              <div className="catalog-card__header">
+                <div className="catalog-card__badges">
+                  <WritingTypeBadge writingTypeId={example.writingTypeId} />
+                  <CefrLevelBadge level={example.level} />
+                </div>
+                <span className="badge badge--primary">{t(`performanceBand.${example.performanceBand}`)}</span>
+              </div>
+              <Link to={`/student/examples/${example.id}`} className="catalog-card__title">{example.title}</Link>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{example.overallScore}/100</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}

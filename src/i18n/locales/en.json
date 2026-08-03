@@ -1,0 +1,683 @@
+{
+  "app": {
+    "name": "Pasific",
+    "tagline": "English writing, assessed with care.",
+    "developedBy": "Developed by Ethosoft"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "duplicate": "Duplicate",
+    "hide": "Hide",
+    "restore": "Restore",
+    "archive": "Archive",
+    "search": "Search",
+    "filter": "Filter",
+    "filters": "Filters",
+    "all": "All",
+    "viewAll": "View all",
+    "seeDetails": "See details",
+    "export": "Export",
+    "exportPdf": "Export PDF",
+    "download": "Download",
+    "optional": "Optional",
+    "required": "Required",
+    "recommended": "Recommended",
+    "min": "Min",
+    "max": "Max",
+    "words": "words",
+    "minutes": "min",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "student": "Student",
+    "teacher": "Teacher",
+    "admin": "Ethosoft Admin",
+    "email": "Email",
+    "school": "School",
+    "class": "Class",
+    "level": "Level",
+    "score": "Score",
+    "status": "Status",
+    "actions": "Actions",
+    "yes": "Yes",
+    "no": "No",
+    "and": "and",
+    "developmentTool": "Development tool",
+    "logout": "Sign out",
+    "comingSoon": "This screen is being prepared."
+  },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "toggleSidebar": "Toggle sidebar",
+    "userMenu": "Account menu"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language",
+    "tr": "Türkçe",
+    "en": "English"
+  },
+  "nav": {
+    "student": {
+      "home": "Home",
+      "assignments": "Assignments",
+      "practice": "Practice",
+      "catalog": "Catalog",
+      "examples": "Sample Library",
+      "portfolio": "Portfolio",
+      "settings": "Profile"
+    },
+    "teacher": {
+      "dashboard": "Dashboard",
+      "classes": "Classes",
+      "assignments": "Assignments",
+      "catalog": "Catalog",
+      "reports": "Reports",
+      "school": "School",
+      "team": "Team",
+      "settings": "Settings",
+      "menu": "Menu"
+    },
+    "admin": {
+      "dashboard": "Dashboard",
+      "schools": "Schools",
+      "users": "Users",
+      "teachers": "Teachers",
+      "students": "Students",
+      "activationCodes": "Activation Codes",
+      "catalog": "Global Catalog",
+      "writingTypes": "Writing Types",
+      "levels": "CEFR Levels",
+      "rubrics": "Rubrics",
+      "auditLog": "Audit Log",
+      "settings": "Settings"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to Pasific",
+      "subtitle": "English writing practice and assessment.",
+      "username": "Username",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "rememberMe": "Remember me",
+      "submit": "Sign in",
+      "activateAccount": "Activate an account",
+      "forgotPassword": "Forgot password?",
+      "invalidCredentials": "Username or password is incorrect.",
+      "devRoleSwitch": "Demo: switch role",
+      "demoHint": "This is a demo environment — any password works for these accounts."
+    },
+    "activate": {
+      "title": "Activate your account",
+      "step1Title": "Enter activation code",
+      "step1Description": "Your teacher or school gave you an activation code linked to your class.",
+      "code": "Activation code",
+      "codePlaceholder": "e.g. PSFC-2K9X-771A",
+      "validateCode": "Validate code",
+      "codeInvalid": "This activation code was not found. Check it and try again.",
+      "codeExpired": "This activation code has expired. Ask your teacher for a new one.",
+      "codeUsed": "This activation code has already been used.",
+      "linkedTo": "This code is linked to:",
+      "step2Title": "Create your account",
+      "chooseUsername": "Choose a username",
+      "usernameTaken": "This username is already taken.",
+      "choosePassword": "Create a password",
+      "confirmPassword": "Confirm password",
+      "passwordWeak": "Password must be at least 8 characters and include a letter and a number.",
+      "passwordMismatch": "Passwords do not match.",
+      "recoveryTitle": "Recovery details (optional)",
+      "recoveryDescription": "Add an email or phone number so you can recover your account if you forget your password. You can skip this.",
+      "email": "Email address",
+      "emailInvalid": "Enter a valid email address.",
+      "phone": "Phone number",
+      "phoneInvalid": "Enter a valid phone number.",
+      "termsLabel": "I accept the Pasific privacy notice and account terms.",
+      "termsRequired": "You must accept the terms to continue.",
+      "activate": "Activate account",
+      "successTitle": "Account activated",
+      "successDescription": "Your account is ready. Continuing to your dashboard…",
+      "goToDashboard": "Go to dashboard"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Choose how you'd like to recover access to your account.",
+      "byEmail": "Recover with email",
+      "byPhone": "Recover with phone number",
+      "askTeacher": "Ask your teacher for a temporary password",
+      "askTeacherDescription": "Your teacher can create a temporary password for you. You will be asked to set a new password the next time you sign in.",
+      "identifier": "Username",
+      "sendCode": "Send recovery code",
+      "noRecoveryTitle": "No recovery details on file",
+      "noRecoveryDescription": "This account has no recovery email or phone number. Please ask your teacher to reset your password.",
+      "checkInbox": "If an account matches, a recovery code has been sent.",
+      "backToLogin": "Back to sign in"
+    }
+  },
+  "roles": {
+    "student": "Student",
+    "teacher": "Teacher",
+    "school_admin": "School Administrator",
+    "super_admin": "Ethosoft Super Admin"
+  },
+  "permission": {
+    "denied": {
+      "title": "You do not have permission",
+      "description": "You don't have access to this section. Contact your school administrator if you think this is a mistake."
+    }
+  },
+  "states": {
+    "empty": {
+      "generic": "Nothing here yet."
+    },
+    "error": {
+      "generic": "Something went wrong.",
+      "retry": "Try again"
+    }
+  },
+  "cefr": {
+    "B1": "B1",
+    "B2": "B2",
+    "C1": "C1",
+    "C2": "C2"
+  },
+  "writingType": {
+    "opinion_essay": "Opinion Essay",
+    "argumentative_essay": "Argumentative Essay",
+    "for_and_against_essay": "For and Against Essay",
+    "advantages_disadvantages_essay": "Advantages and Disadvantages Essay",
+    "problem_solution_essay": "Problem–Solution Essay",
+    "cause_effect_essay": "Cause and Effect Essay",
+    "compare_contrast_essay": "Compare and Contrast Essay",
+    "formal_email": "Formal Email",
+    "informal_email": "Informal Email",
+    "complaint_letter": "Complaint Letter",
+    "application_letter": "Application Letter",
+    "article": "Article",
+    "report": "Report",
+    "review": "Review",
+    "narrative_story": "Narrative Story",
+    "descriptive_writing": "Descriptive Writing",
+    "blog_post": "Blog Post"
+  },
+  "rubric": {
+    "criterion": {
+      "task_fulfilment": { "name": "Task Fulfilment & Idea Development", "description": "How fully and thoughtfully the writing addresses the task and develops ideas." },
+      "genre_achievement": { "name": "Genre & Communicative Achievement", "description": "How well the writing meets the conventions and purpose of the requested genre." },
+      "organisation_cohesion": { "name": "Organisation & Cohesion", "description": "How clearly ideas are structured, linked and progressed." },
+      "vocabulary_range": { "name": "Vocabulary Range & Control", "description": "The range, precision and accuracy of vocabulary used." },
+      "grammar_mechanics": { "name": "Grammar, Sentence Structure & Mechanics", "description": "Grammatical accuracy, sentence variety, punctuation and spelling." }
+    },
+    "customRubric": "Custom Rubric",
+    "customRubricWarning": "Results in this assignment may not be directly comparable to standard Pasific scores because of the custom scoring settings used.",
+    "aiSuggestedScore": "AI Suggested Score",
+    "teacherFinalScore": "Teacher Final Score",
+    "weight": "Weight"
+  },
+  "severity": {
+    "critical": { "label": "Critical", "description": "Seriously changes meaning or breaks an essential requirement." },
+    "mistake": { "label": "Mistake", "description": "A clear error that weakens accuracy or communication." },
+    "inaccuracy": { "label": "Inaccuracy", "description": "A smaller issue that doesn't prevent understanding." },
+    "info": { "label": "Suggestion", "description": "An optional improvement to style or naturalness." }
+  },
+  "errorCategoryGroup": {
+    "grammar": "Grammar",
+    "vocabulary": "Vocabulary",
+    "organisation": "Organisation",
+    "task_genre": "Task and Genre"
+  },
+  "errorCategory": {
+    "verb_tense": "Verb tense",
+    "subject_verb_agreement": "Subject–verb agreement",
+    "articles": "Articles",
+    "prepositions": "Prepositions",
+    "singular_plural": "Singular/plural",
+    "pronouns": "Pronouns",
+    "word_order": "Word order",
+    "modal_verbs": "Modal verbs",
+    "conditionals": "Conditionals",
+    "relative_clauses": "Relative clauses",
+    "sentence_fragments": "Sentence fragments",
+    "run_on_sentences": "Run-on sentences",
+    "clause_structure": "Clause structure",
+    "agreement": "Agreement",
+    "auxiliary_verbs": "Auxiliary verbs",
+    "word_choice": "Word choice",
+    "word_form": "Word form",
+    "collocation": "Collocation",
+    "repetition": "Repetition",
+    "register": "Register",
+    "informal_language": "Informal language",
+    "false_friend": "False friend",
+    "spelling": "Spelling",
+    "precision": "Precision",
+    "limited_range": "Limited range",
+    "missing_thesis": "Missing thesis statement",
+    "weak_topic_sentence": "Weak topic sentence",
+    "weak_paragraph_focus": "Weak paragraph focus",
+    "unsupported_idea": "Unsupported idea",
+    "repeated_idea": "Repeated idea",
+    "incorrect_linking_device": "Incorrect linking device",
+    "mechanical_cohesion": "Mechanical cohesion",
+    "missing_conclusion": "Missing conclusion",
+    "unclear_reference": "Unclear reference",
+    "poor_progression": "Poor progression",
+    "partially_answered_prompt": "Partially answered prompt",
+    "off_topic_content": "Off-topic content",
+    "missing_position": "Missing position",
+    "inappropriate_register": "Inappropriate register",
+    "missing_required_section": "Missing required section",
+    "genre_convention_issue": "Genre convention issue",
+    "insufficient_development": "Insufficient development"
+  },
+  "performanceBand": {
+    "developing": "Developing",
+    "meets_expectations": "Meets Expectations",
+    "strong": "Strong",
+    "advanced": "Advanced"
+  },
+  "catalogSource": {
+    "pasific_library": "Pasific Library",
+    "school_library": "School Library",
+    "draft": "My Draft"
+  },
+  "catalogVisibility": {
+    "global": "Global",
+    "school": "This school only",
+    "personal_draft": "Personal draft"
+  },
+  "difficulty": {
+    "developing": "Foundational",
+    "standard": "Standard",
+    "challenging": "Challenging"
+  },
+  "submissionStatus": {
+    "not_started": "Not started",
+    "in_progress": "In progress",
+    "submitted": "Submitted",
+    "analyzing": "Analyzing",
+    "result_ready": "Result ready",
+    "teacher_review_pending": "Teacher review pending"
+  },
+  "assignmentStatus": {
+    "draft": "Draft",
+    "published": "Published",
+    "closed": "Closed"
+  },
+  "activationCodeStatus": {
+    "unused": "Unused",
+    "used": "Used",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "accountStatus": {
+    "active": "Active",
+    "suspended": "Suspended",
+    "pending_password_reset": "Password reset pending"
+  },
+  "aiSupportMode": {
+    "none": "No writing-stage AI support",
+    "critical_alerts_only": "Critical alerts only",
+    "guided_practice": "Guided practice assistance"
+  },
+  "teacher": {
+    "dashboard": {
+      "activeClasses": "Active classes",
+      "awaitingReview": "Awaiting review",
+      "recentSubmissions": "Recently submitted",
+      "classAverages": "Class average by assignment",
+      "frequentErrors": "Most frequent class error categories",
+      "needsSupport": "Students who may need support",
+      "recentAssignments": "Recently created assignments",
+      "newAssignment": "New assignment",
+      "reviewCount_one": "{{count}} writing to review",
+      "reviewCount_other": "{{count}} writings to review",
+      "activeAssignmentsWeek": "{{count}} active assignments this week"
+    },
+    "classes": {
+      "studentCount": "{{count}} students",
+      "criterionAverages": "Class criterion averages",
+      "commonErrors": "Common error categories",
+      "searchStudents": "Search students…",
+      "lastSubmission": "Last submission",
+      "recentScore": "Recent score",
+      "focusArea": "Current focus area",
+      "resetPassword": "Reset password",
+      "resetPasswordConfirmTitle": "Create a temporary password?",
+      "resetPasswordConfirmDescription": "The student will be asked to set a new password the next time they sign in. Their current password will stop working.",
+      "resetPasswordDone": "Temporary password created. The student must change it at next login."
+    },
+    "assignments": {
+      "createNew": "New assignment",
+      "stepTopic": "Topic",
+      "stepDetails": "Details",
+      "stepAiSupport": "Writing-stage AI support",
+      "stepScoring": "Scoring",
+      "stepReview": "Review & publish",
+      "chooseFromPasific": "Choose from Pasific Library",
+      "chooseFromSchool": "Choose from School Library",
+      "createNewTopic": "Create a new school topic",
+      "title": "Assignment title",
+      "prompt": "Writing prompt",
+      "writingType": "Writing type",
+      "level": "Target level",
+      "minWords": "Minimum words",
+      "maxWords": "Maximum words",
+      "dueAt": "Due date and time",
+      "timeLimit": "Time limit (minutes, optional)",
+      "classes": "Assigned classes",
+      "instructions": "Instructions",
+      "referenceText": "Reference text (optional, read-only for students)",
+      "showAiScoreImmediately": "Show AI score immediately after submission",
+      "useStandardRubric": "Use the standard Pasific rubric",
+      "weight": "Weight (%)",
+      "totalWeight": "Total weight",
+      "totalWeightWarning": "Criterion weights must add up to 100%.",
+      "addCriterion": "Add assignment-specific criterion",
+      "restoreStandard": "Restore standard rubric",
+      "disableCriterion": "Disable",
+      "enableCriterion": "Enable",
+      "publish": "Publish assignment",
+      "saveDraft": "Save as draft",
+      "reviewTitle": "Review before publishing",
+      "noAssignments": "No assignments yet",
+      "resultsTitle": "Submissions",
+      "avgScore": "Average score",
+      "submittedCount": "Submitted",
+      "notStartedCount": "Not started"
+    },
+    "review": {
+      "aiReasoning": "AI reasoning",
+      "teacherFeedback": "Teacher feedback",
+      "feedbackPlaceholder": "Write feedback for the student…",
+      "overrideReason": "Reason for change",
+      "publish": "Publish result",
+      "saveDraft": "Save as draft",
+      "publishedNote": "This result has been published to the student.",
+      "draftNote": "This review is saved as a draft and not yet visible to the student.",
+      "previousWork": "Previous writing results",
+      "acceptAiScore": "Accept AI score"
+    },
+    "catalog": {
+      "tabPasific": "Pasific Library",
+      "tabSchool": "School Library",
+      "tabHidden": "Hidden in This School",
+      "tabDrafts": "Drafts",
+      "assign": "Assign",
+      "preview": "Preview",
+      "duplicateForSchool": "Duplicate for school",
+      "hideForSchool": "Hide for school",
+      "restoreForSchool": "Restore",
+      "archive": "Archive",
+      "deleteConfirmTitle": "Delete this topic?",
+      "deleteConfirmDescription": "This school-specific topic will be permanently removed.",
+      "hideConfirmTitle": "Hide this topic for your school?",
+      "hideConfirmDescription": "Students and teachers at your school will no longer see this Pasific Library topic. You can restore it at any time.",
+      "newTopic": "New school topic"
+    },
+    "reports": {
+      "classReport": "Class report",
+      "selectClass": "Select a class",
+      "selectAssignment": "Select an assignment"
+    },
+    "school": {
+      "name": "School name",
+      "city": "City",
+      "planStatus": "Plan status"
+    },
+    "team": {
+      "permissions": "Permissions",
+      "title": "Teaching Team"
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "totalSchools": "Schools",
+      "totalTeachers": "Teachers",
+      "totalStudents": "Students",
+      "activeAssignments": "Active assignments",
+      "recentSchools": "Recently active schools",
+      "schoolUsageSummary": "School usage summary",
+      "flaggedInconsistencies": "Flagged scoring inconsistencies"
+    },
+    "schools": {
+      "create": "Create school",
+      "name": "School name",
+      "city": "City",
+      "status": "Status",
+      "suspend": "Suspend school",
+      "reactivate": "Reactivate school",
+      "suspendConfirmTitle": "Suspend this school?",
+      "suspendConfirmDescription": "Teachers and students at this school will lose access until it is reactivated.",
+      "planStatus": "Plan status",
+      "openSchool": "Open school",
+      "classes": "Classes",
+      "teachers": "Teachers",
+      "students": "Students"
+    },
+    "users": {
+      "createTeacher": "Create teacher account",
+      "assignSchool": "Assign to school",
+      "assignClasses": "Assign classes",
+      "permissions": "Permissions",
+      "suspendAccount": "Suspend account",
+      "reactivateAccount": "Reactivate account"
+    },
+    "codes": {
+      "createBatch": "Create activation code batch",
+      "school": "School",
+      "class": "Class",
+      "count": "Number of codes",
+      "expiresAt": "Expiration date",
+      "generate": "Generate codes",
+      "revoke": "Revoke",
+      "revokeConfirmTitle": "Revoke this activation code?",
+      "revokeConfirmDescription": "Students will no longer be able to use this code to activate an account.",
+      "exportSheet": "Export printable sheet",
+      "code": "Code",
+      "batch": "Batch"
+    },
+    "catalog": {
+      "addGlobalTopic": "Add global topic",
+      "promoteFromSchool": "School-submitted suggestions",
+      "promote": "Publish to global library"
+    },
+    "writingTypes": {
+      "addNew": "Add writing type",
+      "namePlaceholder": "New writing type name"
+    },
+    "levels": {
+      "descriptorsFor": "Descriptors for {{level}}"
+    },
+    "rubrics": {
+      "standardVersion": "Standard rubric version",
+      "aiModelVersion": "AI model version (placeholder)",
+      "overrideStats": "Teacher override statistics",
+      "avgOverride": "Average override",
+      "overrideFrequency": "Override frequency"
+    },
+    "auditLog": {
+      "allTypes": "All event types",
+      "actor": "Actor",
+      "target": "Target"
+    },
+    "settings": {
+      "platformName": "Platform name",
+      "defaultLanguage": "Default language",
+      "maintenanceMode": "Maintenance mode"
+    }
+  },
+  "settings": {
+    "account": "Account",
+    "username": "Username",
+    "school": "School",
+    "class": "Class",
+    "recovery": "Recovery details",
+    "noRecoveryEmail": "No recovery email on file",
+    "noRecoveryPhone": "No recovery phone number on file",
+    "preferences": "Preferences",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "portfolio": {
+    "history": "Writing history",
+    "scoreTrendChart": "Score trend over time",
+    "errorFrequencyChart": "Most frequent error categories",
+    "writingTypeChart": "Writing types practised",
+    "assignmentSource": "Assignment",
+    "practiceSource": "Independent practice",
+    "customRubricNote": "Custom-rubric results are shown separately and excluded from trend charts.",
+    "filterSource": "Source"
+  },
+  "practice": {
+    "newTitle": "New Writing Practice",
+    "step1": "Choose a writing type and level",
+    "step2": "Choose a topic",
+    "step3": "Options",
+    "writingType": "Writing type",
+    "level": "Level",
+    "topic": "Topic",
+    "chooseTopicPlaceholder": "Select a topic…",
+    "timer": "Optional timer",
+    "enableTimer": "Set a time limit",
+    "minutes": "minutes",
+    "start": "Start writing",
+    "empty": "No independent practice yet",
+    "emptyDescription": "Start a new writing practice to build your own portfolio outside assigned tasks.",
+    "guidedAssistance": "Guided assistance",
+    "guidedAssistanceHint": "Ask for a hint — Pasific will guide you with a question, not a finished sentence.",
+    "askForHint": "Ask for a hint",
+    "correctionStyle": "Correction style",
+    "correctionHint": "Hint first",
+    "correctionExplanation": "Explanation first",
+    "correctionAttempt": "Show correction after my attempt"
+  },
+  "examples": {
+    "performanceFilter": "Performance level",
+    "strongPoints": "Strong points",
+    "weakPoints": "Development areas",
+    "whyThisScore": "Why this writing received this score",
+    "noResults": "No sample writings match your filters"
+  },
+  "catalog": {
+    "searchPlaceholder": "Search topics…",
+    "levelFilter": "Level",
+    "typeFilter": "Writing type",
+    "noResults": "No topics match your filters",
+    "noResultsDescription": "Try a different level, writing type or search term.",
+    "learningObjectives": "Learning objectives",
+    "genreExpectations": "Genre expectations",
+    "planningQuestions": "Planning questions",
+    "relatedExamples": "Related sample writings",
+    "startFromTopic": "Practise this topic",
+    "scopeNote": "This change only applies to your own school."
+  },
+  "annotatedText": {
+    "addToStudyList": "Add to study list",
+    "addedToStudyList": "Added to study list",
+    "tabs": {
+      "annotated": "Annotated Text",
+      "scoreBreakdown": "Score Breakdown",
+      "studyRecommendations": "Study Recommendations",
+      "teacherFeedback": "Teacher Feedback"
+    },
+    "filterAll": "All",
+    "selectAnnotationHint": "Tap a highlighted phrase to see details.",
+    "noAnnotations": "No issues were flagged in this category."
+  },
+  "editor": {
+    "autosave": {
+      "saving": "Saving…",
+      "saved": "Saved",
+      "offline": "Waiting for connection",
+      "retrying": "Retrying…",
+      "failed": "Save failed"
+    },
+    "lastSaved": "Last saved {{time}}",
+    "fullscreen": "Full-screen mode",
+    "exitFullscreen": "Exit full-screen",
+    "placeholder": "Start writing here…",
+    "simulateOffline": "Simulate connection loss",
+    "backOnline": "Back online",
+    "submit": "Submit",
+    "confirmTitle": "Submit this writing?",
+    "confirmPoint1": "This will become your official submission for this assignment.",
+    "confirmPoint2": "You will not be able to edit it afterwards.",
+    "confirmPoint3": "You can still practise this skill separately — independent practice will not replace this result.",
+    "confirmSubmit": "Yes, submit",
+    "practiseAgain": "Practise again",
+    "submittedTitle": "Submission received",
+    "submittedDescription": "Your writing has been submitted and is now waiting for analysis.",
+    "backToAssignments": "Back to assignments",
+    "wordCountBelowMin": "Your writing is below the suggested minimum word count.",
+    "wordCountAboveMax": "Your writing is above the suggested maximum word count."
+  },
+  "student": {
+    "assignment": {
+      "prompt": "Writing prompt",
+      "instructions": "Instructions",
+      "rubricPreview": "Scoring criteria",
+      "referenceText": "Reference text",
+      "wordRange": "Word count",
+      "timeLimit": "Time limit",
+      "due": "Due",
+      "aiSupport": "AI support during writing",
+      "startWriting": "Start writing",
+      "continueWriting": "Continue writing",
+      "viewResult": "View result"
+    },
+    "home": {
+      "greeting": "Hello, {{name}}",
+      "assignedTasks": "Assigned tasks",
+      "noAssignedTasks": "No assignments yet",
+      "noAssignedTasksDescription": "When your teacher publishes an assignment for your class, it will appear here.",
+      "recentPerformance": "Recent performance",
+      "noRecentPerformance": "No results yet",
+      "noRecentPerformanceDescription": "Complete your first assignment or a practice writing to see your results here.",
+      "mainDevelopmentArea": "Current focus area",
+      "portfolioSummary": "Portfolio summary",
+      "newPractice": "New Writing Practice",
+      "newPracticeDescription": "Choose a writing type, level and topic to practise independently.",
+      "viewPortfolio": "View portfolio"
+    },
+    "portfolio": {
+      "totalCompleted": "Completed writings",
+      "typesPractised": "Writing types practised",
+      "scoreTrend": "Score trend",
+      "topErrors": "Most frequent error categories",
+      "filters": "Filters",
+      "noData": "No completed writings match these filters yet."
+    }
+  },
+  "studyRec": {
+    "repetitionReason": "This word or phrase was repeated often and made the writing feel less varied.",
+    "repetitionExplanation": "Using synonyms or pronouns instead of repeating the same word keeps writing natural and shows a wider vocabulary range.",
+    "svaReason": "This pattern appeared {{count}} times and sometimes affected sentence accuracy.",
+    "svaExplanation": "In the present simple, verbs need an \"-s\" ending after he/she/it, and \"people\" is already plural and takes a plural verb.",
+    "lesson": {
+      "synonymRange": "Widening your vocabulary range",
+      "sva": "Subject–Verb Agreement"
+    },
+    "exercise": {
+      "synonymSwap": "Synonym swap: rewrite five sentences",
+      "svaEightQuestions": "Eight-question practice exercise"
+    }
+  }
+}
