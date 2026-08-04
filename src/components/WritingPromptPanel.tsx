@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { AssignmentRubric, CefrLevel, WritingTypeId } from '../types/entities';
 import { CefrLevelBadge } from './CefrLevelBadge';
 import { WritingTypeBadge } from './WritingTypeBadge';
+import { fetchVideoForWritingType, type ReferenceVideo } from '../services/videoData';
+import { VideoLink } from './VideoLink';
 
 interface WritingPromptPanelProps {
   title: string;
@@ -21,6 +23,9 @@ interface WritingPromptPanelProps {
 export function WritingPromptPanel({ title, prompt, writingTypeId, level, minWords, maxWords, timeLimitMinutes, dueLabel, rubric, extra }: WritingPromptPanelProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
+  const [video, setVideo] = useState<ReferenceVideo | null>(null);
+
+  useEffect(() => { fetchVideoForWritingType(writingTypeId).then(setVideo); }, [writingTypeId]);
 
   return (
     <div className="card" style={{ overflow: 'hidden' }}>
@@ -57,6 +62,7 @@ export function WritingPromptPanel({ title, prompt, writingTypeId, level, minWor
               </div>
             </div>
           )}
+          <VideoLink video={video} />
           {extra}
         </div>
       )}

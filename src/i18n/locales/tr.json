@@ -553,6 +553,9 @@
     "customRubricNote": "Özel rubrik sonuçları ayrıca gösterilir ve gelişim grafiklerine dahil edilmez.",
     "filterSource": "Kaynak"
   },
+  "video": {
+    "watchExplainer": "İzle: {{title}}"
+  },
   "practice": {
     "newTitle": "Yeni Writing Çalışması",
     "step1": "Bir yazı türü ve seviye seç",

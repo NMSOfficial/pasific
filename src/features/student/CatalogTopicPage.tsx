@@ -7,16 +7,23 @@ import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { VideoLink } from '../../components/VideoLink';
 import { fetchCatalogTopic } from '../../services/contentData';
+import { fetchVideoForWritingType, type ReferenceVideo } from '../../services/videoData';
 
 export function CatalogTopicPage() {
   const { t } = useTranslation();
   const { topicId } = useParams();
   const [topic, setTopic] = useState<CatalogTopic | null | undefined>(undefined);
+  const [video, setVideo] = useState<ReferenceVideo | null>(null);
 
   useEffect(() => {
     if (topicId) fetchCatalogTopic(topicId).then(setTopic);
   }, [topicId]);
+
+  useEffect(() => {
+    if (topic) fetchVideoForWritingType(topic.writingTypeId).then(setVideo);
+  }, [topic]);
 
   if (topic === null) return <Navigate to="/student/catalog" replace />;
   if (topic === undefined) return <LoadingSkeleton height="12rem" />;
@@ -37,6 +44,8 @@ export function CatalogTopicPage() {
         </div>
 
         <p style={{ lineHeight: 'var(--leading-relaxed)' }}>{topic.prompt}</p>
+
+        <VideoLink video={video} />
 
         <div className="assignment-card__meta" style={{ fontSize: 'var(--text-sm)' }}>
           <span>{topic.minWords}–{topic.maxWords} {t('common.words')}</span>

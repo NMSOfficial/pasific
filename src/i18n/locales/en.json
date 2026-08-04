@@ -553,6 +553,9 @@
     "customRubricNote": "Custom-rubric results are shown separately and excluded from trend charts.",
     "filterSource": "Source"
   },
+  "video": {
+    "watchExplainer": "Watch: {{title}}"
+  },
   "practice": {
     "newTitle": "New Writing Practice",
     "step1": "Choose a writing type and level",
