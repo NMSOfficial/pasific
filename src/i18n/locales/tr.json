@@ -474,7 +474,10 @@
       "openSchool": "Okulu aç",
       "classes": "Sınıflar",
       "teachers": "Öğretmenler",
-      "students": "Öğrenciler"
+      "students": "Öğrenciler",
+      "createClass": "Sınıf oluştur",
+      "className": "Sınıf adı",
+      "gradeLabel": "Seviye etiketi"
     },
     "users": {
       "createTeacher": "Öğretmen hesabı oluştur",

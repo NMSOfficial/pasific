@@ -96,6 +96,13 @@ export async function setSchoolStatus(schoolId: string, status: 'active' | 'susp
   await logAudit(status === 'suspended' ? 'account_suspended' : 'account_reactivated', actor, schoolId, `School ${status}`);
 }
 
+export async function createClass(input: { schoolId: string; name: string; gradeLabel: string }): Promise<void> {
+  const { error } = await supabase
+    .from('school_classes')
+    .insert({ school_id: input.schoolId, name: input.name, grade_label: input.gradeLabel || null });
+  if (error) throw error;
+}
+
 export async function fetchClassesForSchool(schoolId: string): Promise<ClassRow[]> {
   const { data: classes } = await supabase.from('school_classes').select('*').eq('school_id', schoolId);
   const classIds = (classes ?? []).map((c) => c.id as string);

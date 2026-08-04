@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useParams } from 'react-router-dom';
+import { PlusCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { AdminProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -8,7 +9,7 @@ import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
 import {
-  fetchSchool, fetchClassesForSchool, fetchTeachersForSchool, fetchStudentsForSchool, setSchoolStatus,
+  fetchSchool, fetchClassesForSchool, fetchTeachersForSchool, fetchStudentsForSchool, setSchoolStatus, createClass,
   type SchoolSummary, type ClassRow, type TeacherRow, type StudentRow,
 } from '../../services/adminData';
 
@@ -18,6 +19,10 @@ export function AdminSchoolDetailPage() {
   const { user } = useAuth();
   const admin = user as AdminProfile;
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [creatingClass, setCreatingClass] = useState(false);
+  const [className, setClassName] = useState('');
+  const [gradeLabel, setGradeLabel] = useState('');
+  const [savingClass, setSavingClass] = useState(false);
 
   const [school, setSchool] = useState<SchoolSummary | null | undefined>(undefined);
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -43,6 +48,17 @@ export function AdminSchoolDetailPage() {
     reload();
   };
 
+  const handleCreateClass = async () => {
+    if (!className.trim()) return;
+    setSavingClass(true);
+    await createClass({ schoolId: school.id, name: className.trim(), gradeLabel: gradeLabel.trim() });
+    setSavingClass(false);
+    setClassName('');
+    setGradeLabel('');
+    setCreatingClass(false);
+    reload();
+  };
+
   return (
     <>
       <PageHeader
@@ -63,7 +79,27 @@ export function AdminSchoolDetailPage() {
       </div>
 
       <section className="section-block">
-        <div className="section-block__title"><h2>{t('admin.schools.classes')}</h2></div>
+        <div className="section-block__title">
+          <h2>{t('admin.schools.classes')}</h2>
+          <button type="button" className="btn btn--secondary btn--sm" onClick={() => setCreatingClass((v) => !v)}>
+            <PlusCircle size={16} aria-hidden="true" /> {t('admin.schools.createClass')}
+          </button>
+        </div>
+
+        {creatingClass && (
+          <div className="card card--padded" style={{ marginBottom: 'var(--space-4)', display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div className="field" style={{ flex: 1, minWidth: '10rem' }}>
+              <label className="field__label" htmlFor="class-name">{t('admin.schools.className')}</label>
+              <input id="class-name" className="input-control" value={className} onChange={(e) => setClassName(e.target.value)} placeholder="10-A" />
+            </div>
+            <div className="field" style={{ flex: 1, minWidth: '10rem' }}>
+              <label className="field__label" htmlFor="class-grade">{t('admin.schools.gradeLabel')}</label>
+              <input id="class-grade" className="input-control" value={gradeLabel} onChange={(e) => setGradeLabel(e.target.value)} placeholder="10. Sınıf" />
+            </div>
+            <button type="button" className="btn btn--primary" onClick={handleCreateClass} disabled={!className.trim() || savingClass}>{t('common.save')}</button>
+          </div>
+        )}
+
         <div className="card-grid">
           {classes.map((c) => (
             <div key={c.id} className="card card--padded">

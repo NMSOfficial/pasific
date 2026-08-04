@@ -474,7 +474,10 @@
       "openSchool": "Open school",
       "classes": "Classes",
       "teachers": "Teachers",
-      "students": "Students"
+      "students": "Students",
+      "createClass": "Create class",
+      "className": "Class name",
+      "gradeLabel": "Grade label"
     },
     "users": {
       "createTeacher": "Create teacher account",
