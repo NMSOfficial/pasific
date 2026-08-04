@@ -1,20 +1,34 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignment, getClass } from '../../mock/selectors';
+import type { Assignment } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { CustomRubricBadge } from '../../components/StatusBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDateTime } from '../../utils/format';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchTeacherClasses, type ClassMeta } from '../../services/teacherData';
+import { useAuth } from '../../state/AuthContext';
+import type { TeacherProfile } from '../../types/entities';
 
 export function TeacherAssignmentDetailPage() {
   const { t, i18n } = useTranslation();
   const { assignmentId } = useParams();
-  const state = useMockState();
+  const { user } = useAuth();
+  const teacher = user as TeacherProfile;
+  const [assignment, setAssignment] = useState<Assignment | null | undefined>(undefined);
+  const [classes, setClasses] = useState<ClassMeta[]>([]);
 
-  const assignment = assignmentId ? getAssignment(state, assignmentId) : undefined;
-  if (!assignment) return <Navigate to="/teacher/assignments" replace />;
+  useEffect(() => {
+    if (!assignmentId) return;
+    fetchAssignment(assignmentId).then(setAssignment);
+    fetchTeacherClasses(teacher.id).then(setClasses);
+  }, [assignmentId, teacher.id]);
+
+  if (assignment === null) return <Navigate to="/teacher/assignments" replace />;
+  if (assignment === undefined) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -36,7 +50,7 @@ export function TeacherAssignmentDetailPage() {
         {assignment.instructions && <p style={{ color: 'var(--color-text-muted)' }}>{assignment.instructions}</p>}
 
         <div className="assignment-card__meta" style={{ fontSize: 'var(--text-sm)' }}>
-          <span>{assignment.classIds.map((cid) => getClass(state, cid)?.name).join(', ')}</span>
+          <span>{assignment.classIds.map((cid) => classes.find((c) => c.id === cid)?.name).join(', ')}</span>
           <span>{t('student.assignment.due')}: {formatDateTime(assignment.dueAt, i18n.resolvedLanguage ?? 'tr')}</span>
           <span>{assignment.minWords}–{assignment.maxWords} {t('common.words')}</span>
           <span>{t('aiSupportMode.' + assignment.aiSupportMode)}</span>

@@ -127,14 +127,23 @@ export async function fetchTeachersForSchool(schoolId: string): Promise<TeacherR
   const { data: links } = await supabase.from('teacher_schools').select('teacher_id').eq('school_id', schoolId);
   const teacherIds = (links ?? []).map((r) => r.teacher_id as string);
   if (!teacherIds.length) return [];
-  const { data: profiles } = await supabase.from('profiles').select('*').in('id', teacherIds);
+  const [{ data: profiles }, { data: perms }] = await Promise.all([
+    supabase.from('profiles').select('*').in('id', teacherIds),
+    supabase.from('teacher_permissions').select('teacher_id, permission').in('teacher_id', teacherIds),
+  ]);
+  const permsByTeacher = new Map<string, TeacherPermissionKey[]>();
+  for (const row of perms ?? []) {
+    const list = permsByTeacher.get(row.teacher_id as string) ?? [];
+    list.push(row.permission as TeacherPermissionKey);
+    permsByTeacher.set(row.teacher_id as string, list);
+  }
   return (profiles ?? []).map((p) => ({
     id: p.id as string,
     username: p.username as string,
     displayName: p.display_name as string,
     status: p.status as TeacherRow['status'],
     lastLoginAt: (p.last_login_at as string | null) ?? null,
-    permissions: [],
+    permissions: permsByTeacher.get(p.id as string) ?? [],
   }));
 }
 

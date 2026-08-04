@@ -1,17 +1,23 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
 import type { TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { PermissionGuard } from '../../components/PermissionGuard';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchTeachersForSchool, type TeacherRow } from '../../services/adminData';
 
 export function TeamPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
+  const [colleagues, setColleagues] = useState<TeacherRow[] | null>(null);
 
-  const colleagues = state.teachers.filter((tch) => tch.schoolIds.includes(teacher.schoolIds[0]));
+  useEffect(() => {
+    if (teacher.schoolIds[0]) fetchTeachersForSchool(teacher.schoolIds[0]).then(setColleagues);
+  }, [teacher.schoolIds]);
+
+  if (!colleagues) return <LoadingSkeleton height="12rem" />;
 
   return (
     <PermissionGuard permission="manage_teachers">

@@ -1,27 +1,41 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignment, getSubmissionsForAssignment } from '../../mock/selectors';
+import type { Assignment, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { SubmissionStatusBadge } from '../../components/StatusBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchClass, fetchStudentsByIds } from '../../services/teacherData';
+import { fetchSubmissionsForAssignment } from '../../services/submissionData';
 
 export function AssignmentResultsPage() {
   const { t, i18n } = useTranslation();
   const { assignmentId } = useParams();
-  const state = useMockState();
+  const [assignment, setAssignment] = useState<Assignment | null | undefined>(undefined);
+  const [rows, setRows] = useState<{ student: StudentProfile | undefined; sub: Submission | undefined }[]>([]);
 
-  const assignment = assignmentId ? getAssignment(state, assignmentId) : undefined;
-  if (!assignment) return <Navigate to="/teacher/assignments" replace />;
+  useEffect(() => {
+    if (!assignmentId) return;
+    fetchAssignment(assignmentId).then(async (a) => {
+      setAssignment(a);
+      if (!a) return;
+      const classResults = await Promise.all(a.classIds.map((id) => fetchClass(id)));
+      const studentIds = [...new Set(classResults.filter((c) => c !== null).flatMap((c) => c!.studentIds))];
+      const [students, submissions] = await Promise.all([
+        fetchStudentsByIds(studentIds),
+        fetchSubmissionsForAssignment(a.id),
+      ]);
+      setRows(studentIds.map((studentId) => ({
+        student: students.find((s) => s.id === studentId),
+        sub: submissions.find((s) => s.studentId === studentId),
+      })));
+    });
+  }, [assignmentId]);
 
-  const classStudents = assignment.classIds.flatMap((cid) => state.classes.find((c) => c.id === cid)?.studentIds ?? []);
-  const submissions = getSubmissionsForAssignment(state, assignment.id);
-
-  const rows = classStudents.map((studentId) => {
-    const student = state.students.find((s) => s.id === studentId);
-    const sub = submissions.find((s) => s.studentId === studentId);
-    return { student, sub };
-  });
+  if (assignment === null) return <Navigate to="/teacher/assignments" replace />;
+  if (assignment === undefined) return <LoadingSkeleton height="12rem" />;
 
   const scored = rows.filter((r) => r.sub?.finalScore !== undefined);
   const avgScore = scored.length ? Math.round(scored.reduce((sum, r) => sum + (r.sub!.finalScore ?? 0), 0) / scored.length) : undefined;

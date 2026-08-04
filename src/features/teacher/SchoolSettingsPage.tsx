@@ -1,17 +1,23 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getSchool } from '../../mock/selectors';
 import type { TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { PermissionGuard } from '../../components/PermissionGuard';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchSchool, type SchoolSummary } from '../../services/adminData';
 
 export function SchoolSettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
-  const school = getSchool(state, teacher.schoolIds[0]);
+  const [school, setSchool] = useState<SchoolSummary | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (teacher.schoolIds[0]) fetchSchool(teacher.schoolIds[0]).then(setSchool);
+  }, [teacher.schoolIds]);
+
+  if (school === undefined) return <LoadingSkeleton height="12rem" />;
 
   return (
     <PermissionGuard permission="manage_school_settings">
@@ -23,7 +29,7 @@ export function SchoolSettingsPage() {
         </div>
         <div className="field">
           <label className="field__label" htmlFor="ss-city">{t('teacher.school.city')}</label>
-          <input id="ss-city" className="input-control" defaultValue={school?.city} />
+          <input id="ss-city" className="input-control" defaultValue={school?.city ?? ''} />
         </div>
         <div className="field">
           <label className="field__label" htmlFor="ss-plan-status">{t('teacher.school.planStatus')}</label>

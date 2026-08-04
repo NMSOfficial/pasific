@@ -1,36 +1,47 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getDraftsForTeacher, getHiddenGlobalTopicsForSchool, getVisibleCatalogForSchool } from '../../mock/selectors';
 import type { CatalogTopic, TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { useHasPermission } from '../../components/PermissionGuard';
+import {
+  fetchVisibleCatalogForSchool, fetchHiddenGlobalTopicsForSchool, fetchDraftsForTeacher,
+  hideCatalogTopicForSchool, restoreCatalogTopicForSchool, duplicateCatalogTopicToSchool, deleteCatalogTopic,
+} from '../../services/contentData';
 
 type Tab = 'pasific' | 'school' | 'hidden' | 'drafts';
 
 export function SchoolCatalogPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
   const canManage = useHasPermission('manage_school_catalog');
   const schoolId = teacher.schoolIds[0];
 
   const [tab, setTab] = useState<Tab>('pasific');
   const [confirmAction, setConfirmAction] = useState<{ type: 'hide' | 'delete'; topic: CatalogTopic } | null>(null);
+  const [visible, setVisible] = useState<CatalogTopic[] | null>(null);
+  const [hiddenTopics, setHiddenTopics] = useState<CatalogTopic[]>([]);
+  const [drafts, setDrafts] = useState<CatalogTopic[]>([]);
 
-  const visible = getVisibleCatalogForSchool(state, schoolId);
+  const reload = useCallback(() => {
+    fetchVisibleCatalogForSchool(schoolId).then(setVisible);
+    fetchHiddenGlobalTopicsForSchool(schoolId).then(setHiddenTopics);
+    fetchDraftsForTeacher(teacher.id).then(setDrafts);
+  }, [schoolId, teacher.id]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (!visible) return <LoadingSkeleton height="12rem" />;
+
   const pasificTopics = visible.filter((t2) => t2.visibility === 'global');
   const schoolTopics = visible.filter((t2) => t2.visibility === 'school');
-  const hiddenTopics = getHiddenGlobalTopicsForSchool(state, schoolId);
-  const drafts = getDraftsForTeacher(state, teacher.id);
-
   const list = tab === 'pasific' ? pasificTopics : tab === 'school' ? schoolTopics : tab === 'hidden' ? hiddenTopics : drafts;
 
   const confirmDialog = () => {
@@ -41,7 +52,7 @@ export function SchoolCatalogPage() {
           open
           title={t('teacher.catalog.hideConfirmTitle')}
           description={t('teacher.catalog.hideConfirmDescription')}
-          onConfirm={() => { mockStore.hideCatalogTopicForSchool(schoolId, confirmAction.topic.id, teacher.id, teacher.displayName); setConfirmAction(null); }}
+          onConfirm={async () => { await hideCatalogTopicForSchool(schoolId, confirmAction.topic.id, teacher.id, teacher.displayName); setConfirmAction(null); reload(); }}
           onCancel={() => setConfirmAction(null)}
         />
       );
@@ -52,7 +63,7 @@ export function SchoolCatalogPage() {
         title={t('teacher.catalog.deleteConfirmTitle')}
         description={t('teacher.catalog.deleteConfirmDescription')}
         destructive
-        onConfirm={() => { mockStore.deleteSchoolCatalogTopic(confirmAction.topic.id); setConfirmAction(null); }}
+        onConfirm={async () => { await deleteCatalogTopic(confirmAction.topic.id); setConfirmAction(null); reload(); }}
         onCancel={() => setConfirmAction(null)}
       />
     );
@@ -90,18 +101,18 @@ export function SchoolCatalogPage() {
 
                 {tab === 'pasific' && canManage && (
                   <>
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => mockStore.duplicateCatalogTopicToSchool(topic.id, schoolId, teacher.id)}>{t('teacher.catalog.duplicateForSchool')}</button>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={async () => { await duplicateCatalogTopicToSchool(topic.id, schoolId, teacher.id); reload(); }}>{t('teacher.catalog.duplicateForSchool')}</button>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmAction({ type: 'hide', topic })}>{t('teacher.catalog.hideForSchool')}</button>
                   </>
                 )}
                 {tab === 'school' && canManage && (
                   <>
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => mockStore.duplicateCatalogTopicToSchool(topic.id, schoolId, teacher.id)}>{t('common.duplicate')}</button>
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={async () => { await duplicateCatalogTopicToSchool(topic.id, schoolId, teacher.id); reload(); }}>{t('common.duplicate')}</button>
                     <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmAction({ type: 'delete', topic })}>{t('common.delete')}</button>
                   </>
                 )}
                 {tab === 'hidden' && canManage && (
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => mockStore.restoreCatalogTopicForSchool(schoolId, topic.id, teacher.id, teacher.displayName)}>{t('teacher.catalog.restoreForSchool')}</button>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={async () => { await restoreCatalogTopicForSchool(schoolId, topic.id, teacher.id, teacher.displayName); reload(); }}>{t('teacher.catalog.restoreForSchool')}</button>
                 )}
                 {tab === 'drafts' && (
                   <button type="button" className="btn btn--ghost btn--sm" onClick={() => setConfirmAction({ type: 'delete', topic })}>{t('common.delete')}</button>

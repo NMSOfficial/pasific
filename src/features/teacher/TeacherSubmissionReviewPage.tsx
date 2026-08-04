@@ -1,12 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getAssignment, getSubmission } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { TeacherProfile, WritingAnnotation } from '../../types/entities';
+import type { Assignment, StudentProfile, Submission, TeacherProfile, WritingAnnotation } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
@@ -18,49 +16,68 @@ import { RecommendationCard } from '../../components/RecommendationCard';
 import { FeedbackTabs } from '../../components/FeedbackTabs';
 import { MobileBottomSheet } from '../../components/MobileBottomSheet';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { AuditTimeline } from '../../components/AuditTimeline';
 import { useIsMobile } from '../../utils/useIsMobile';
 import { formatDateTime } from '../../utils/format';
 import { exportSubmissionResultPdf } from '../../utils/pdf';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchStudent } from '../../services/teacherData';
+import { fetchSubmission, fetchSubmissionsForStudents, applyTeacherOverride, publishTeacherReview, saveSubmissionDraft, retryAiGrading } from '../../services/submissionData';
 
 export function TeacherSubmissionReviewPage() {
   const { t, i18n } = useTranslation();
   const { submissionId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<WritingAnnotation | null>(null);
   const [feedback, setFeedback] = useState('');
 
-  const submission = submissionId ? getSubmission(state, submissionId) : undefined;
+  const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
+  const [assignment, setAssignment] = useState<Assignment | undefined>(undefined);
+  const [student, setStudent] = useState<StudentProfile | undefined>(undefined);
+  const [otherSubmissions, setOtherSubmissions] = useState<Submission[]>([]);
 
-  useEffect(() => {
-    setFeedback(submission?.teacherFeedback ?? '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submission?.id]);
+  const reload = useCallback(() => {
+    if (!submissionId) return;
+    fetchSubmission(submissionId).then(async (sub) => {
+      setSubmission(sub);
+      setFeedback(sub?.teacherFeedback ?? '');
+      if (!sub) return;
+      const [a, s, otherSubs] = await Promise.all([
+        sub.assignmentId ? fetchAssignment(sub.assignmentId) : Promise.resolve(undefined),
+        fetchStudent(sub.studentId),
+        fetchSubmissionsForStudents([sub.studentId], { excludePractice: true }),
+      ]);
+      setAssignment(a ?? undefined);
+      setStudent(s ?? undefined);
+      setOtherSubmissions(otherSubs.filter((s2) => s2.id !== sub.id && s2.status === 'result_ready').sort((x, y) => (y.submittedAt ?? '').localeCompare(x.submittedAt ?? '')));
+    });
+  }, [submissionId]);
 
-  if (!submission || submission.isPractice) return <Navigate to="/teacher/assignments" replace />;
+  useEffect(() => { reload(); }, [reload]);
 
-  const assignment = submission.assignmentId ? getAssignment(state, submission.assignmentId) : undefined;
-  const student = state.students.find((s) => s.id === submission.studentId);
-  const otherSubmissions = state.submissions
-    .filter((s) => s.studentId === submission.studentId && s.id !== submission.id && s.status === 'result_ready')
-    .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
+  if (submission === null) return <Navigate to="/teacher/assignments" replace />;
+  if (submission === undefined) return <LoadingSkeleton height="12rem" />;
+  if (submission.isPractice) return <Navigate to="/teacher/assignments" replace />;
 
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;
 
-  const handleOverride = (criterionId: string, newScore: number, reason: string) => {
-    mockStore.applyTeacherOverride({ submissionId: submission.id, criterionId, newScore, reason, teacherId: teacher.id, teacherName: teacher.displayName });
+  const handleOverride = async (criterionId: string, newScore: number, reason: string) => {
+    await applyTeacherOverride({ submissionId: submission.id, criterionId, newScore, reason, teacherId: teacher.id, teacherName: teacher.displayName });
+    reload();
   };
 
-  const handlePublish = () => {
-    mockStore.publishTeacherReview(submission.id, feedback, teacher.id);
+  const handlePublish = async () => {
+    await publishTeacherReview(submission.id, feedback, teacher.id);
+    reload();
   };
 
-  const handleSaveDraft = () => {
-    mockStore.saveSubmissionDraft(submission.id, submission.text);
+  const handleSaveDraft = async () => {
+    await saveSubmissionDraft(submission.id, submission.text);
+    reload();
   };
 
   if (submission.status === 'submitted' || submission.status === 'analyzing') {
@@ -80,7 +97,7 @@ export function TeacherSubmissionReviewPage() {
           icon={<AlertCircle size={36} strokeWidth={1.5} color="var(--color-error)" aria-hidden="true" />}
           title={t('submissionStatus.gradingFailed')}
           action={
-            <button type="button" className="btn btn--primary" onClick={() => mockStore.retryAiGrading(submission.id)}>
+            <button type="button" className="btn btn--primary" onClick={async () => { await retryAiGrading(submission.id); reload(); }}>
               {t('submissionStatus.retry')}
             </button>
           }
