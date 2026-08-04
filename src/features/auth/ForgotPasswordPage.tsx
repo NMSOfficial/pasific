@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, UserCog, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
-import { mockStore } from '../../mock/useMockStore';
+import { supabase } from '../../services/supabaseClient';
 
 type Method = 'email' | 'phone' | 'teacher';
 type Result = 'sent' | 'no_recovery' | null;
@@ -13,17 +13,14 @@ export function ForgotPasswordPage() {
   const [method, setMethod] = useState<Method>('email');
   const [identifier, setIdentifier] = useState('');
   const [result, setResult] = useState<Result>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const user = mockStore.findUserByUsername(identifier.trim());
-    const hasEmail = user && 'email' in user && !!user.email;
-    const hasPhone = user && 'phone' in user && !!user.phone;
-    if (user && ((method === 'email' && !hasEmail) || (method === 'phone' && !hasPhone))) {
-      setResult('no_recovery');
-    } else {
-      setResult('sent');
-    }
+    setSubmitting(true);
+    const { data } = await supabase.rpc('check_recovery_contact', { p_username: identifier.trim(), p_method: method });
+    setSubmitting(false);
+    setResult((data as Result) ?? 'sent');
   };
 
   const reset = () => {
@@ -76,8 +73,8 @@ export function ForgotPasswordPage() {
               required
             />
           </div>
-          <button type="submit" className="btn btn--primary btn--lg btn--block">
-            {t('auth.forgotPassword.sendCode')}
+          <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={submitting}>
+            {submitting ? t('common.loading') : t('auth.forgotPassword.sendCode')}
           </button>
         </form>
       )}
