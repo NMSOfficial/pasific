@@ -6,6 +6,7 @@
   },
   "common": {
     "loading": "Yükleniyor…",
+    "role": "Rol",
     "save": "Kaydet",
     "cancel": "Vazgeç",
     "close": "Kapat",

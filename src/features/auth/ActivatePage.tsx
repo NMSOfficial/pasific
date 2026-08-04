@@ -15,6 +15,7 @@ type Step = 1 | 2 | 3;
 
 interface ValidatedCode {
   code: string;
+  role: 'student' | 'teacher';
   schoolName: string | null;
   className: string | null;
 }
@@ -60,7 +61,7 @@ export function ActivatePage() {
       setCodeError(t('auth.activate.codeUsed'));
       return;
     }
-    setValidatedCode({ code: code.trim(), schoolName: result.school_name, className: result.class_name });
+    setValidatedCode({ code: code.trim(), role: result.code_role, schoolName: result.school_name, className: result.class_name });
     setStep(2);
   };
 
@@ -119,7 +120,8 @@ export function ActivatePage() {
 
     await refreshUser();
     setStep(3);
-    window.setTimeout(() => navigate('/student/home', { replace: true }), 1600);
+    const homePath = validatedCode.role === 'teacher' ? '/teacher/dashboard' : '/student/home';
+    window.setTimeout(() => navigate(homePath, { replace: true }), 1600);
   };
 
   return (
@@ -177,7 +179,7 @@ export function ActivatePage() {
             <h1 className="auth-card__title">{t('auth.activate.step2Title')}</h1>
           </div>
           <div className="linked-summary">
-            {t('auth.activate.linkedTo')} <strong>{validatedCode.schoolName}</strong> — {validatedCode.className}
+            {t('auth.activate.linkedTo')} <strong>{validatedCode.schoolName}</strong>{validatedCode.className ? ` — ${validatedCode.className}` : ''}
           </div>
           <form className="auth-form" onSubmit={handleCreateAccount} noValidate>
             <div className="field">

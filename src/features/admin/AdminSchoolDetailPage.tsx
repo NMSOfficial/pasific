@@ -1,32 +1,46 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getClassesForSchool } from '../../mock/selectors';
 import type { AdminProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
+import {
+  fetchSchool, fetchClassesForSchool, fetchTeachersForSchool, fetchStudentsForSchool, setSchoolStatus,
+  type SchoolSummary, type ClassRow, type TeacherRow, type StudentRow,
+} from '../../services/adminData';
 
 export function AdminSchoolDetailPage() {
   const { t, i18n } = useTranslation();
   const { schoolId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const admin = user as AdminProfile;
   const [confirmSuspend, setConfirmSuspend] = useState(false);
 
-  const school = schoolId ? state.schools.find((s) => s.id === schoolId) : undefined;
-  if (!school) return <Navigate to="/admin/schools" replace />;
+  const [school, setSchool] = useState<SchoolSummary | null | undefined>(undefined);
+  const [classes, setClasses] = useState<ClassRow[]>([]);
+  const [teachers, setTeachers] = useState<TeacherRow[]>([]);
+  const [students, setStudents] = useState<StudentRow[]>([]);
 
-  const classes = getClassesForSchool(state, school.id);
-  const teachers = state.teachers.filter((t2) => t2.schoolIds.includes(school.id));
-  const students = state.students.filter((s) => s.schoolId === school.id);
+  const reload = useCallback(() => {
+    if (!schoolId) return;
+    fetchSchool(schoolId).then(setSchool);
+    fetchClassesForSchool(schoolId).then(setClasses);
+    fetchTeachersForSchool(schoolId).then(setTeachers);
+    fetchStudentsForSchool(schoolId).then(setStudents);
+  }, [schoolId]);
 
-  const toggleStatus = () => {
-    mockStore.setSchoolStatus(school.id, school.status === 'active' ? 'suspended' : 'active', admin.id, admin.displayName);
+  useEffect(() => { reload(); }, [reload]);
+
+  if (school === null) return <Navigate to="/admin/schools" replace />;
+  if (school === undefined) return <LoadingSkeleton height="12rem" />;
+
+  const toggleStatus = async () => {
+    await setSchoolStatus(school.id, school.status === 'active' ? 'suspended' : 'active', { id: admin.id, displayName: admin.displayName });
     setConfirmSuspend(false);
+    reload();
   };
 
   return (
@@ -54,7 +68,7 @@ export function AdminSchoolDetailPage() {
           {classes.map((c) => (
             <div key={c.id} className="card card--padded">
               <p style={{ fontWeight: 'var(--weight-medium)' }}>{c.name}</p>
-              <p className="field__hint">{c.gradeLabel} · {c.studentIds.length} {t('common.student').toLowerCase()}</p>
+              <p className="field__hint">{c.gradeLabel} · {c.studentCount} {t('common.student').toLowerCase()}</p>
             </div>
           ))}
         </div>
@@ -66,7 +80,7 @@ export function AdminSchoolDetailPage() {
           {teachers.map((tch) => (
             <div key={tch.id} className="card card--padded">
               <p style={{ fontWeight: 'var(--weight-medium)' }}>{tch.displayName}</p>
-              <p className="field__hint">@{tch.username} · {formatDate(tch.lastLoginAt, i18n.resolvedLanguage ?? 'tr')}</p>
+              <p className="field__hint">@{tch.username} · {formatDate(tch.lastLoginAt ?? undefined, i18n.resolvedLanguage ?? 'tr')}</p>
             </div>
           ))}
         </div>

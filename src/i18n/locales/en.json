@@ -6,6 +6,7 @@
   },
   "common": {
     "loading": "Loading…",
+    "role": "Role",
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
