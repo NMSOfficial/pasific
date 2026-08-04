@@ -1,51 +1,55 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PlusCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
 import { WRITING_TYPES } from '../../mock/writingTypes';
-import type { AdminProfile, CefrLevel, WritingTypeId } from '../../types/entities';
+import type { AdminProfile, CatalogTopic, CefrLevel, WritingTypeId } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CatalogCard } from '../../components/CatalogCard';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchGlobalCatalogTopics, fetchSchoolSuggestedCatalogTopics, createGlobalCatalogTopic, promoteCatalogTopicToGlobal } from '../../services/contentData';
 
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
 
 export function AdminCatalogPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const admin = user as AdminProfile;
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ title: '', prompt: '', writingTypeId: WRITING_TYPES[0].id as WritingTypeId, level: 'B2' as CefrLevel, minWords: 200, maxWords: 260 });
+  const [globalTopics, setGlobalTopics] = useState<CatalogTopic[] | null>(null);
+  const [schoolSuggestions, setSchoolSuggestions] = useState<CatalogTopic[]>([]);
 
-  const globalTopics = state.catalogTopics.filter((t2) => t2.visibility === 'global');
-  const schoolSuggestions = state.catalogTopics.filter((t2) => t2.visibility === 'school');
+  const reload = useCallback(() => {
+    fetchGlobalCatalogTopics().then(setGlobalTopics);
+    fetchSchoolSuggestedCatalogTopics().then(setSchoolSuggestions);
+  }, []);
 
-  const handleCreate = () => {
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleCreate = async () => {
     if (!form.title.trim() || !form.prompt.trim()) return;
-    mockStore.upsertSchoolCatalogTopic({
-      id: `topic_${Date.now()}`,
+    await createGlobalCatalogTopic({
       title: form.title,
       prompt: form.prompt,
       writingTypeId: form.writingTypeId,
       level: form.level,
       minWords: form.minWords,
       maxWords: form.maxWords,
-      estimatedMinutes: 40,
-      tags: [],
-      difficulty: 'standard',
-      learningObjectives: [],
-      genreExpectations: [],
-      relatedExampleIds: [],
-      sourceType: 'pasific_library',
-      visibility: 'global',
       createdBy: admin.id,
-      updatedAt: new Date().toISOString(),
     });
     setForm({ title: '', prompt: '', writingTypeId: WRITING_TYPES[0].id, level: 'B2', minWords: 200, maxWords: 260 });
     setCreating(false);
+    reload();
   };
+
+  const handlePromote = async (topicId: string) => {
+    await promoteCatalogTopicToGlobal(topicId);
+    reload();
+  };
+
+  if (!globalTopics) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -93,7 +97,7 @@ export function AdminCatalogPage() {
               <div key={topic.id} className="card card--padded catalog-card">
                 <p className="catalog-card__title">{topic.title}</p>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{topic.prompt}</p>
-                <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => mockStore.promoteCatalogTopicToGlobal(topic.id)}>
+                <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => handlePromote(topic.id)}>
                   {t('admin.catalog.promote')}
                 </button>
               </div>

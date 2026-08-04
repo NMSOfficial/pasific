@@ -1,0 +1,70 @@
+-- Seed the writing_types and error_categories lookup tables. Every
+-- catalog_topics/assignments/submissions/writing_annotations row FKs into
+-- these — without this seed, nothing that references a writing type or
+-- error category can be inserted. Mirrors src/mock/writingTypes.ts and
+-- src/mock/errorCategories.ts exactly (labels stay client-side via i18n).
+
+insert into writing_types (id, category) values
+  ('opinion_essay', 'essay'),
+  ('argumentative_essay', 'essay'),
+  ('for_and_against_essay', 'essay'),
+  ('advantages_disadvantages_essay', 'essay'),
+  ('problem_solution_essay', 'essay'),
+  ('cause_effect_essay', 'essay'),
+  ('compare_contrast_essay', 'essay'),
+  ('formal_email', 'correspondence'),
+  ('informal_email', 'correspondence'),
+  ('complaint_letter', 'correspondence'),
+  ('application_letter', 'correspondence'),
+  ('article', 'functional'),
+  ('report', 'functional'),
+  ('review', 'functional'),
+  ('narrative_story', 'creative'),
+  ('descriptive_writing', 'creative'),
+  ('blog_post', 'functional')
+on conflict (id) do nothing;
+
+insert into error_categories (id, group_name, name_key) values
+  ('verb_tense', 'grammar', 'errorCategory.verb_tense'),
+  ('subject_verb_agreement', 'grammar', 'errorCategory.subject_verb_agreement'),
+  ('articles', 'grammar', 'errorCategory.articles'),
+  ('prepositions', 'grammar', 'errorCategory.prepositions'),
+  ('singular_plural', 'grammar', 'errorCategory.singular_plural'),
+  ('pronouns', 'grammar', 'errorCategory.pronouns'),
+  ('word_order', 'grammar', 'errorCategory.word_order'),
+  ('modal_verbs', 'grammar', 'errorCategory.modal_verbs'),
+  ('conditionals', 'grammar', 'errorCategory.conditionals'),
+  ('relative_clauses', 'grammar', 'errorCategory.relative_clauses'),
+  ('sentence_fragments', 'grammar', 'errorCategory.sentence_fragments'),
+  ('run_on_sentences', 'grammar', 'errorCategory.run_on_sentences'),
+  ('clause_structure', 'grammar', 'errorCategory.clause_structure'),
+  ('agreement', 'grammar', 'errorCategory.agreement'),
+  ('auxiliary_verbs', 'grammar', 'errorCategory.auxiliary_verbs'),
+  ('word_choice', 'vocabulary', 'errorCategory.word_choice'),
+  ('word_form', 'vocabulary', 'errorCategory.word_form'),
+  ('collocation', 'vocabulary', 'errorCategory.collocation'),
+  ('repetition', 'vocabulary', 'errorCategory.repetition'),
+  ('register', 'vocabulary', 'errorCategory.register'),
+  ('informal_language', 'vocabulary', 'errorCategory.informal_language'),
+  ('false_friend', 'vocabulary', 'errorCategory.false_friend'),
+  ('spelling', 'vocabulary', 'errorCategory.spelling'),
+  ('precision', 'vocabulary', 'errorCategory.precision'),
+  ('limited_range', 'vocabulary', 'errorCategory.limited_range'),
+  ('missing_thesis', 'organisation', 'errorCategory.missing_thesis'),
+  ('weak_topic_sentence', 'organisation', 'errorCategory.weak_topic_sentence'),
+  ('weak_paragraph_focus', 'organisation', 'errorCategory.weak_paragraph_focus'),
+  ('unsupported_idea', 'organisation', 'errorCategory.unsupported_idea'),
+  ('repeated_idea', 'organisation', 'errorCategory.repeated_idea'),
+  ('incorrect_linking_device', 'organisation', 'errorCategory.incorrect_linking_device'),
+  ('mechanical_cohesion', 'organisation', 'errorCategory.mechanical_cohesion'),
+  ('missing_conclusion', 'organisation', 'errorCategory.missing_conclusion'),
+  ('unclear_reference', 'organisation', 'errorCategory.unclear_reference'),
+  ('poor_progression', 'organisation', 'errorCategory.poor_progression'),
+  ('partially_answered_prompt', 'task_genre', 'errorCategory.partially_answered_prompt'),
+  ('off_topic_content', 'task_genre', 'errorCategory.off_topic_content'),
+  ('missing_position', 'task_genre', 'errorCategory.missing_position'),
+  ('inappropriate_register', 'task_genre', 'errorCategory.inappropriate_register'),
+  ('missing_required_section', 'task_genre', 'errorCategory.missing_required_section'),
+  ('genre_convention_issue', 'task_genre', 'errorCategory.genre_convention_issue'),
+  ('insufficient_development', 'task_genre', 'errorCategory.insufficient_development')
+on conflict (id) do nothing;
