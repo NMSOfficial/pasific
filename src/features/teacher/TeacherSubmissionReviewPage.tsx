@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import { useMockState, mockStore } from '../../mock/useMockStore';
 import { getAssignment, getSubmission } from '../../mock/selectors';
@@ -67,6 +68,23 @@ export function TeacherSubmissionReviewPage() {
       <>
         <PageHeader title={student?.displayName ?? ''} />
         <EmptyState title={t('submissionStatus.analyzing')} />
+      </>
+    );
+  }
+
+  if (submission.status === 'grading_failed') {
+    return (
+      <>
+        <PageHeader title={student?.displayName ?? ''} />
+        <EmptyState
+          icon={<AlertCircle size={36} strokeWidth={1.5} color="var(--color-error)" aria-hidden="true" />}
+          title={t('submissionStatus.gradingFailed')}
+          action={
+            <button type="button" className="btn btn--primary" onClick={() => mockStore.retryAiGrading(submission.id)}>
+              {t('submissionStatus.retry')}
+            </button>
+          }
+        />
       </>
     );
   }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Circle, PenLine, Send, Loader2, CheckCircle2, Clock, type LucideIcon } from 'lucide-react';
+import { Circle, PenLine, Send, Loader2, CheckCircle2, Clock, AlertCircle, type LucideIcon } from 'lucide-react';
 import type { AssignmentRubric, SubmissionStatus } from '../types/entities';
 
 export type BadgeTone = 'neutral' | 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info';
@@ -21,6 +21,7 @@ const SUBMISSION_STATUS_META: Record<SubmissionStatus, { tone: BadgeTone; Icon: 
   analyzing: { tone: 'warning', Icon: Loader2 },
   result_ready: { tone: 'success', Icon: CheckCircle2 },
   teacher_review_pending: { tone: 'warning', Icon: Clock },
+  grading_failed: { tone: 'error', Icon: AlertCircle },
 };
 
 export function SubmissionStatusBadge({ status }: { status: SubmissionStatus }) {

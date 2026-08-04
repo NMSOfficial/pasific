@@ -314,7 +314,10 @@
     "submitted": "Teslim edildi",
     "analyzing": "Analiz ediliyor",
     "result_ready": "Sonuç hazır",
-    "teacher_review_pending": "Öğretmen incelemesinde"
+    "teacher_review_pending": "Öğretmen incelemesinde",
+    "grading_failed": "Değerlendirme başarısız",
+    "gradingFailed": "Yapay zeka değerlendirmesi tamamlanamadı. Lütfen tekrar deneyin.",
+    "retry": "Tekrar Dene"
   },
   "assignmentStatus": {
     "draft": "Taslak",

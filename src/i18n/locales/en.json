@@ -314,7 +314,10 @@
     "submitted": "Submitted",
     "analyzing": "Analyzing",
     "result_ready": "Result ready",
-    "teacher_review_pending": "Teacher review pending"
+    "teacher_review_pending": "Teacher review pending",
+    "grading_failed": "Grading failed",
+    "gradingFailed": "AI grading couldn't be completed. Please try again.",
+    "retry": "Retry"
   },
   "assignmentStatus": {
     "draft": "Draft",

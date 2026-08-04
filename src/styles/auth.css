@@ -48,6 +48,10 @@
   gap: var(--space-2);
 }
 
+.auth-card__footer-links a:hover {
+  text-decoration: underline;
+}
+
 .auth-form { display: flex; flex-direction: column; gap: var(--space-4); }
 
 .auth-screen__footer {

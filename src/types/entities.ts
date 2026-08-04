@@ -215,7 +215,8 @@ export type SubmissionStatus =
   | 'submitted'
   | 'analyzing'
   | 'result_ready'
-  | 'teacher_review_pending';
+  | 'teacher_review_pending'
+  | 'grading_failed';
 
 export type ErrorSeverity = 'critical' | 'mistake' | 'inaccuracy' | 'info';
 

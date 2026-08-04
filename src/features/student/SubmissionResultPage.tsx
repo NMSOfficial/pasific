@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Clock, Loader2 } from 'lucide-react';
+import { AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
+import { useMockState, mockStore } from '../../mock/useMockStore';
 import { getAssignment, getSubmission } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
 import type { StudentProfile, WritingAnnotation } from '../../types/entities';
@@ -48,6 +48,22 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
         <div className="state-panel">
           <Loader2 size={36} className="spin" color="var(--color-primary)" aria-hidden="true" />
           <p className="state-panel__title">{t('submissionStatus.analyzing')}</p>
+          <Link to={backTo} className="btn btn--secondary">{backLabel}</Link>
+        </div>
+      </>
+    );
+  }
+
+  if (submission.status === 'grading_failed') {
+    return (
+      <>
+        <PageHeader title={submission.topicTitle} />
+        <div className="state-panel">
+          <AlertCircle size={36} color="var(--color-error)" aria-hidden="true" />
+          <p className="state-panel__title">{t('submissionStatus.gradingFailed')}</p>
+          <button type="button" className="btn btn--primary" onClick={() => mockStore.retryAiGrading(submission.id)}>
+            {t('submissionStatus.retry')}
+          </button>
           <Link to={backTo} className="btn btn--secondary">{backLabel}</Link>
         </div>
       </>

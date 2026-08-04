@@ -11,6 +11,8 @@ import { WRITING_EXAMPLES } from './examples';
 import { ASSIGNMENTS } from './assignments';
 import { SUBMISSIONS } from './submissions';
 import { AUDIT_EVENTS } from './audit';
+import { standardCriteria } from './rubric';
+import { gradeWithAi } from '../services/aiGrading';
 
 export interface MockState {
   schools: School[];
@@ -212,37 +214,77 @@ class MockStore {
   }
 
   submitSubmission(submissionId: string) {
+    const sub = this.state.submissions.find((x) => x.id === submissionId);
+    if (!sub || (sub.status !== 'not_started' && sub.status !== 'in_progress')) return;
+
     this.update((s) => {
-      const sub = s.submissions.find((x) => x.id === submissionId);
-      if (sub) {
-        sub.status = 'submitted';
-        sub.submittedAt = new Date().toISOString();
-        sub.lastSavedAt = sub.submittedAt;
+      const target = s.submissions.find((x) => x.id === submissionId);
+      if (target) {
+        target.status = 'submitted';
+        target.submittedAt = new Date().toISOString();
+        target.lastSavedAt = target.submittedAt;
       }
       return s;
     });
-    // Simulate async analysis completing shortly after submission.
+
     window.setTimeout(() => {
       this.update((s) => {
-        const sub = s.submissions.find((x) => x.id === submissionId);
-        if (sub && sub.status === 'submitted') sub.status = 'analyzing';
+        const target = s.submissions.find((x) => x.id === submissionId);
+        if (target && target.status === 'submitted') target.status = 'analyzing';
         return s;
       });
-    }, 1500);
-    window.setTimeout(() => {
+      void this.runGrading(submissionId);
+    }, 800);
+  }
+
+  retryAiGrading(submissionId: string) {
+    const sub = this.state.submissions.find((x) => x.id === submissionId);
+    if (!sub || sub.status !== 'grading_failed') return;
+    this.update((s) => {
+      const target = s.submissions.find((x) => x.id === submissionId);
+      if (target) target.status = 'analyzing';
+      return s;
+    });
+    void this.runGrading(submissionId);
+  }
+
+  private async runGrading(submissionId: string) {
+    const sub = this.state.submissions.find((x) => x.id === submissionId);
+    if (!sub) return;
+    const assignment = sub.assignmentId ? this.state.assignments.find((a) => a.id === sub.assignmentId) : undefined;
+    const criteria = (assignment?.rubric.criteria ?? standardCriteria()).filter((c) => c.enabled);
+
+    try {
+      const result = await gradeWithAi({
+        text: sub.text,
+        writingTypeId: sub.writingTypeId,
+        level: sub.level,
+        assignmentPrompt: assignment?.prompt,
+        minWords: assignment?.minWords,
+        maxWords: assignment?.maxWords,
+        criteria,
+      });
       this.update((s) => {
-        const sub = s.submissions.find((x) => x.id === submissionId);
-        if (sub && sub.status === 'analyzing' && sub.criterionScores.length === 0) {
-          const scores = generatePlaceholderScores();
-          sub.criterionScores = scores.criterionScores;
-          sub.aiScore = scores.overall;
-          sub.finalScore = sub.scoreVisibleToStudent ? scores.overall : undefined;
-          sub.status = sub.assignmentId ? 'teacher_review_pending' : 'result_ready';
-          if (!sub.assignmentId) sub.finalScore = scores.overall;
+        const target = s.submissions.find((x) => x.id === submissionId);
+        if (target && target.status === 'analyzing') {
+          target.criterionScores = result.criterionScores;
+          target.annotations = result.annotations;
+          const overall = recomputeFinalScore(result.criterionScores);
+          target.aiScore = overall;
+          target.finalScore = target.scoreVisibleToStudent ? overall : undefined;
+          target.status = target.assignmentId ? 'teacher_review_pending' : 'result_ready';
+          if (!target.assignmentId) target.finalScore = overall;
         }
         return s;
       });
-    }, 4500);
+    } catch (err) {
+      console.error('[grading] request failed:', err);
+      this.update((s) => {
+        const target = s.submissions.find((x) => x.id === submissionId);
+        if (target && target.status === 'analyzing') target.status = 'grading_failed';
+        return s;
+      });
+    }
   }
 
   applyTeacherOverride(params: {
@@ -498,28 +540,6 @@ function recomputeFinalScore(scores: CriterionScore[]): number {
     return sum + (effective / c.maxScore) * c.weight;
   }, 0);
   return Math.round((weighted / totalWeight) * 100);
-}
-
-function generatePlaceholderScores(): { overall: number; criterionScores: CriterionScore[] } {
-  const keys: { id: string; key: string }[] = [
-    { id: 'crit_task_fulfilment', key: 'task_fulfilment' },
-    { id: 'crit_genre_achievement', key: 'genre_achievement' },
-    { id: 'crit_organisation_cohesion', key: 'organisation_cohesion' },
-    { id: 'crit_vocabulary_range', key: 'vocabulary_range' },
-    { id: 'crit_grammar_mechanics', key: 'grammar_mechanics' },
-  ];
-  const criterionScores: CriterionScore[] = keys.map((k) => ({
-    criterionId: k.id,
-    criterionKey: k.key,
-    aiScore: 12 + Math.floor(Math.random() * 6),
-    maxScore: 20,
-    weight: 20,
-    explanation: 'Analysis complete. Full evidence and explanations will appear here.',
-    strongAspects: [],
-    developmentAreas: [],
-  }));
-  const overall = recomputeFinalScore(criterionScores);
-  return { overall, criterionScores };
 }
 
 export const mockStore = new MockStore();
