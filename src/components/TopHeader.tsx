@@ -3,15 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Menu, ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../state/AuthContext';
-import { useMockState } from '../mock/useMockStore';
 import { PasificLogo } from './PasificLogo';
 import { ThemeSelector } from './ThemeSelector';
 import { LanguageSelector } from './LanguageSelector';
 
 export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void }) {
   const { t } = useTranslation();
-  const { user, logout, devSwitchUser } = useAuth();
-  const state = useMockState();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -24,12 +22,6 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
-
-  const demoUsers = [
-    ...state.students.slice(0, 3).map((u) => ({ id: u.id, label: `${u.displayName} (${t('roles.student')})` })),
-    ...state.teachers.slice(0, 3).map((u) => ({ id: u.id, label: `${u.displayName} (${t('roles.teacher')})` })),
-    ...state.admins.map((u) => ({ id: u.id, label: `${u.displayName} (${t('roles.super_admin')})` })),
-  ];
 
   return (
     <header className="top-header">
@@ -85,22 +77,10 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
                 type="button"
                 role="menuitem"
                 className="dropdown-menu__item"
-                onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }}
+                onClick={async () => { setMenuOpen(false); await logout(); navigate('/login'); }}
               >
                 <LogOut size={15} aria-hidden="true" /> {t('common.logout')}
               </button>
-              <div className="dropdown-menu__section dropdown-menu__section--dev">
-                <p className="dropdown-menu__label">{t('auth.login.devRoleSwitch')} <span className="badge badge--warning">{t('common.developmentTool')}</span></p>
-                <select
-                  className="select-control"
-                  value={user?.id}
-                  onChange={(e) => { devSwitchUser(e.target.value); setMenuOpen(false); }}
-                >
-                  {demoUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.label}</option>
-                  ))}
-                </select>
-              </div>
             </div>
           )}
         </div>

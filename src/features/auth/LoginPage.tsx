@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, Info } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
 import { useAuth } from '../../state/AuthContext';
 
@@ -16,10 +16,13 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const result = login(username, password);
+    setSubmitting(true);
+    const result = await login(username, password);
+    setSubmitting(false);
     if (!result.ok) {
       setError(t(result.errorKey));
       return;
@@ -27,13 +30,6 @@ export function LoginPage() {
     const from = (location.state as { from?: Location })?.from;
     navigate(from ? `${from.pathname}${from.search ?? ''}` : '/', { replace: true });
   };
-
-  const demoAccounts = [
-    { username: 'ada.koc', roleKey: 'roles.student' },
-    { username: 'elif.yilmaz', roleKey: 'roles.teacher' },
-    { username: 'mert.aydin', roleKey: 'roles.teacher' },
-    { username: 'selin.koray', roleKey: 'roles.super_admin' },
-  ];
 
   return (
     <AuthLayout>
@@ -94,8 +90,8 @@ export function LoginPage() {
           <span>{t('auth.login.rememberMe')}</span>
         </label>
 
-        <button type="submit" className="btn btn--primary btn--lg btn--block">
-          {t('auth.login.submit')}
+        <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={submitting}>
+          {submitting ? t('common.loading') : t('auth.login.submit')}
         </button>
       </form>
 
@@ -103,21 +99,6 @@ export function LoginPage() {
         <Link to="/activate">{t('auth.login.activateAccount')}</Link>
         <Link to="/forgot-password">{t('auth.login.forgotPassword')}</Link>
       </div>
-
-      <details className="auth-demo-hint">
-        <summary>
-          <Info size={14} aria-hidden="true" />
-          {t('auth.login.devRoleSwitch')} <span className="badge badge--warning">{t('common.developmentTool')}</span>
-        </summary>
-        <ul>
-          {demoAccounts.map((acc) => (
-            <li key={acc.username}>
-              <code>{acc.username}</code> — {t(acc.roleKey)}
-            </li>
-          ))}
-        </ul>
-        <p style={{ marginTop: 'var(--space-2)' }}>{t('auth.login.demoHint')}</p>
-      </details>
     </AuthLayout>
   );
 }
