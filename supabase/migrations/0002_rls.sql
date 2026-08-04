@@ -6,7 +6,7 @@
 -- triggering the RLS policy that is being evaluated — avoids recursion).
 -- ---------------------------------------------------------------------------
 
-create or replace function public.current_role()
+create or replace function public.app_current_role()
 returns text language sql stable security definer set search_path = public as $$
   select role from profiles where id = auth.uid()
 $$;
@@ -337,7 +337,7 @@ create policy "example_annotations managed" on example_annotations for all using
 -- ---------------------------------------------------------------------------
 
 create policy "audit visible to admin and involved school staff" on audit_events for select using (
-  is_admin() or current_role() = 'teacher'
+  is_admin() or app_current_role() = 'teacher'
 );
 -- Inserts happen from trusted server code using the service_role key, which
 -- bypasses RLS entirely — no client-facing insert policy is defined.
