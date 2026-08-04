@@ -9,6 +9,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (username: string, password: string) => Promise<{ ok: true } | { ok: false; errorKey: string }>;
   logout: () => Promise<void>;
+  /** Re-fetch the current session's profile — use after creating it server-side (e.g. activation). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -59,7 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout }), [user, loading, login, logout]);
+  const refreshUser = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+    setUser(appUser);
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, login, logout, refreshUser }),
+    [user, loading, login, logout, refreshUser],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

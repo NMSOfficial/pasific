@@ -4,9 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
 import { useAuth } from '../../state/AuthContext';
-import { mockStore, useMockState } from '../../mock/useMockStore';
-import { getClass, getSchool } from '../../mock/selectors';
-import type { ActivationCode } from '../../types/entities';
+import { supabase } from '../../services/supabaseClient';
+import { usernameToAuthEmail } from '../../utils/authEmail';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[+\d][\d\s]{6,}$/;
@@ -14,16 +13,23 @@ const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 
 type Step = 1 | 2 | 3;
 
+interface ValidatedCode {
+  code: string;
+  schoolName: string | null;
+  className: string | null;
+}
+
 export function ActivatePage() {
   const { t } = useTranslation();
-  const state = useMockState();
-  const { login } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>(1);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState<string | null>(null);
-  const [validatedCode, setValidatedCode] = useState<ActivationCode | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [validatedCode, setValidatedCode] = useState<ValidatedCode | null>(null);
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -34,32 +40,37 @@ export function ActivatePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const handleValidateCode = (e: FormEvent) => {
+  const handleValidateCode = async (e: FormEvent) => {
     e.preventDefault();
     setCodeError(null);
-    const found = mockStore.validateActivationCode(code);
-    if (!found) {
+    setValidating(true);
+    const { data, error } = await supabase.rpc('validate_activation_code', { p_code: code.trim() });
+    setValidating(false);
+
+    const result = error ? null : data?.[0];
+    if (!result || result.code_status === 'not_found') {
       setCodeError(t('auth.activate.codeInvalid'));
       return;
     }
-    if (found.status === 'expired') {
+    if (result.code_status === 'expired') {
       setCodeError(t('auth.activate.codeExpired'));
       return;
     }
-    if (found.status === 'used' || found.status === 'revoked') {
+    if (result.code_status === 'used' || result.code_status === 'revoked') {
       setCodeError(t('auth.activate.codeUsed'));
       return;
     }
-    setValidatedCode(found);
+    setValidatedCode({ code: code.trim(), schoolName: result.school_name, className: result.class_name });
     setStep(2);
   };
 
-  const handleCreateAccount = (e: FormEvent) => {
+  const handleCreateAccount = async (e: FormEvent) => {
     e.preventDefault();
+    if (!validatedCode) return;
     const errors: Record<string, string> = {};
 
-    if (!username.trim()) errors.username = t('common.required');
-    else if (mockStore.isUsernameTaken(username.trim())) errors.username = t('auth.activate.usernameTaken');
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername) errors.username = t('common.required');
 
     if (!PASSWORD_RE.test(password)) errors.password = t('auth.activate.passwordWeak');
     if (password !== confirmPassword) errors.confirmPassword = t('auth.activate.passwordMismatch');
@@ -69,23 +80,47 @@ export function ActivatePage() {
 
     if (!termsAccepted) errors.terms = t('auth.activate.termsRequired');
 
-    setFieldErrors(errors);
-    if (Object.keys(errors).length > 0 || !validatedCode) return;
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
 
-    mockStore.activateStudent({
-      codeId: validatedCode.id,
-      username: username.trim(),
-      passwordHash: password,
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
+    setSubmitting(true);
+
+    const { data: taken } = await supabase.rpc('is_username_taken', { p_username: trimmedUsername });
+    if (taken) {
+      setSubmitting(false);
+      setFieldErrors({ username: t('auth.activate.usernameTaken') });
+      return;
+    }
+
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: usernameToAuthEmail(trimmedUsername),
+      password,
     });
-    login(username.trim(), password);
+    if (signUpError) {
+      setSubmitting(false);
+      setFieldErrors({ username: signUpError.message });
+      return;
+    }
+
+    const { error: claimError } = await supabase.rpc('claim_activation_code', {
+      p_code: validatedCode.code,
+      p_username: trimmedUsername,
+      p_display_name: trimmedUsername,
+      p_email: email.trim(),
+      p_phone: phone.trim(),
+    });
+    setSubmitting(false);
+    if (claimError) {
+      setFieldErrors({ username: claimError.message });
+      return;
+    }
+
+    await refreshUser();
     setStep(3);
     window.setTimeout(() => navigate('/student/home', { replace: true }), 1600);
   };
-
-  const school = validatedCode ? getSchool(state, validatedCode.schoolId) : undefined;
-  const cls = validatedCode ? getClass(state, validatedCode.classId) : undefined;
 
   return (
     <AuthLayout wide={step === 2}>
@@ -126,8 +161,8 @@ export function ActivatePage() {
                 <AlertCircle size={14} aria-hidden="true" /> {codeError}
               </p>
             )}
-            <button type="submit" className="btn btn--primary btn--lg btn--block">
-              {t('auth.activate.validateCode')}
+            <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={validating}>
+              {validating ? t('common.loading') : t('auth.activate.validateCode')}
             </button>
           </form>
           <div className="auth-card__footer-links">
@@ -142,7 +177,7 @@ export function ActivatePage() {
             <h1 className="auth-card__title">{t('auth.activate.step2Title')}</h1>
           </div>
           <div className="linked-summary">
-            {t('auth.activate.linkedTo')} <strong>{school?.name}</strong> — {cls?.name}
+            {t('auth.activate.linkedTo')} <strong>{validatedCode.schoolName}</strong> — {validatedCode.className}
           </div>
           <form className="auth-form" onSubmit={handleCreateAccount} noValidate>
             <div className="field">
@@ -246,8 +281,8 @@ export function ActivatePage() {
             </label>
             {fieldErrors.terms && <p id="terms-error" className="field__error" role="alert"><AlertCircle size={14} aria-hidden="true" />{fieldErrors.terms}</p>}
 
-            <button type="submit" className="btn btn--primary btn--lg btn--block">
-              {t('auth.activate.activate')}
+            <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={submitting}>
+              {submitting ? t('common.loading') : t('auth.activate.activate')}
             </button>
           </form>
         </>
