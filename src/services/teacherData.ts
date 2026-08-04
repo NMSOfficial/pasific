@@ -45,6 +45,16 @@ export async function fetchTeacherClasses(teacherId: string): Promise<ClassMeta[
   return attachStudentIds(classes ?? []);
 }
 
+export async function createClassForTeacher(input: { schoolId: string; name: string; gradeLabel: string }): Promise<string> {
+  const { data, error } = await supabase.rpc('create_class_for_teacher', {
+    p_school_id: input.schoolId,
+    p_name: input.name,
+    p_grade_label: input.gradeLabel,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function fetchClass(classId: string): Promise<ClassMeta | null> {
   const { data: row } = await supabase.from('school_classes').select('*').eq('id', classId).maybeSingle();
   if (!row) return null;
