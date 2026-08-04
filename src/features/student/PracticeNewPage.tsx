@@ -1,45 +1,59 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getVisibleCatalogForSchool } from '../../mock/selectors';
 import { WRITING_TYPES } from '../../mock/writingTypes';
-import type { CefrLevel, StudentProfile, WritingTypeId } from '../../types/entities';
+import type { CatalogTopic, CefrLevel, StudentProfile, WritingTypeId } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchVisibleCatalogForSchool } from '../../services/contentData';
+import { createDraftSubmission } from '../../services/submissionData';
 
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
 
 export function PracticeNewPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const student = user as StudentProfile;
 
   const preselectedTopicId = searchParams.get('topicId') ?? undefined;
-  const preselected = preselectedTopicId ? state.catalogTopics.find((t2) => t2.id === preselectedTopicId) : undefined;
-  const schoolCatalog = getVisibleCatalogForSchool(state, student.schoolId);
-  const fallback = schoolCatalog[0];
+  const [catalog, setCatalog] = useState<CatalogTopic[] | null>(null);
 
-  const [writingType, setWritingType] = useState(preselected?.writingTypeId ?? fallback?.writingTypeId ?? WRITING_TYPES[0].id);
-  const [level, setLevel] = useState<CefrLevel>(preselected?.level ?? fallback?.level ?? 'B2');
-  const [topicId, setTopicId] = useState(preselected?.id ?? '');
+  useEffect(() => { fetchVisibleCatalogForSchool(student.schoolId).then(setCatalog); }, [student.schoolId]);
+
+  const preselected = catalog?.find((t2) => t2.id === preselectedTopicId);
+  const fallback = catalog?.[0];
+
+  const [writingType, setWritingType] = useState<WritingTypeId | undefined>();
+  const [level, setLevel] = useState<CefrLevel | undefined>();
+  const [topicId, setTopicId] = useState('');
   const [timerEnabled, setTimerEnabled] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState(30);
+  const [starting, setStarting] = useState(false);
+
+  useEffect(() => {
+    if (!catalog) return;
+    setWritingType((prev) => prev ?? preselected?.writingTypeId ?? fallback?.writingTypeId ?? WRITING_TYPES[0].id);
+    setLevel((prev) => prev ?? preselected?.level ?? fallback?.level ?? 'B2');
+    setTopicId((prev) => prev || preselected?.id || '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog]);
 
   const availableTopics = useMemo(() => {
-    return getVisibleCatalogForSchool(state, student.schoolId)
-      .filter((topic) => topic.writingTypeId === writingType && topic.level === level);
-  }, [state, student.schoolId, writingType, level]);
+    if (!catalog) return [];
+    return catalog.filter((topic) => topic.writingTypeId === writingType && topic.level === level);
+  }, [catalog, writingType, level]);
 
   const selectedTopic = availableTopics.find((topic) => topic.id === topicId) ?? availableTopics[0];
 
-  const handleStart = () => {
+  if (!catalog || writingType === undefined || level === undefined) return <LoadingSkeleton height="12rem" />;
+
+  const handleStart = async () => {
     if (!selectedTopic) return;
-    const submission = mockStore.createDraftSubmission({
-      id: `practice_${student.id}_${Date.now()}`,
+    setStarting(true);
+    const submission = await createDraftSubmission({
       isPractice: true,
       studentId: student.id,
       schoolId: student.schoolId,
@@ -105,7 +119,7 @@ export function PracticeNewPage() {
           )}
         </div>
 
-        <button type="button" className="btn btn--primary btn--lg" disabled={!selectedTopic} onClick={handleStart}>
+        <button type="button" className="btn btn--primary btn--lg" disabled={!selectedTopic || starting} onClick={handleStart}>
           {t('practice.start')}
         </button>
       </div>

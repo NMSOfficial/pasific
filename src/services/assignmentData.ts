@@ -66,6 +66,15 @@ export async function fetchAssignmentsForTeacher(teacherId: string): Promise<Ass
   return Promise.all((rows ?? []).map(mapAssignment));
 }
 
+export async function fetchAssignmentsForClasses(classIds: string[]): Promise<Assignment[]> {
+  if (!classIds.length) return [];
+  const { data: links } = await supabase.from('assignment_classes').select('assignment_id').in('class_id', classIds);
+  const assignmentIds = [...new Set((links ?? []).map((a) => a.assignment_id as string))];
+  if (!assignmentIds.length) return [];
+  const { data: rows } = await supabase.from('assignments').select('*').in('id', assignmentIds);
+  return Promise.all((rows ?? []).map(mapAssignment));
+}
+
 export async function fetchAssignment(assignmentId: string): Promise<Assignment | null> {
   const { data: row } = await supabase.from('assignments').select('*').eq('id', assignmentId).maybeSingle();
   if (!row) return null;

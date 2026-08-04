@@ -1,19 +1,24 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getClass, getSchool } from '../../mock/selectors';
 import type { StudentProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { ThemeSelector } from '../../components/ThemeSelector';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { fetchSchool, type SchoolSummary } from '../../services/adminData';
+import { fetchClass, type ClassMeta } from '../../services/teacherData';
 
 export function StudentSettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
-  const school = getSchool(state, student.schoolId);
-  const classes = student.classIds.map((id) => getClass(state, id)).filter(Boolean);
+  const [school, setSchool] = useState<SchoolSummary | null>(null);
+  const [classes, setClasses] = useState<ClassMeta[]>([]);
+
+  useEffect(() => {
+    fetchSchool(student.schoolId).then(setSchool);
+    Promise.all(student.classIds.map((id) => fetchClass(id))).then((list) => setClasses(list.filter((c): c is ClassMeta => c !== null)));
+  }, [student.schoolId, student.classIds]);
 
   return (
     <>
@@ -26,7 +31,7 @@ export function StudentSettingsPage() {
             <Row label={t('settings.username')} value={student.username} />
             <Row label={t('common.student')} value={student.displayName} />
             <Row label={t('settings.school')} value={school?.name ?? '—'} />
-            <Row label={t('settings.class')} value={classes.map((c) => c!.name).join(', ') || '—'} />
+            <Row label={t('settings.class')} value={classes.map((c) => c.name).join(', ') || '—'} />
           </dl>
         </section>
 

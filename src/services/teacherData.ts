@@ -88,6 +88,11 @@ export async function fetchStudent(studentId: string): Promise<StudentProfile | 
   return student ?? null;
 }
 
+export async function fetchUserDisplayName(userId: string): Promise<string | undefined> {
+  const { data } = await supabase.from('profiles').select('display_name').eq('id', userId).maybeSingle();
+  return (data?.display_name as string | undefined) ?? undefined;
+}
+
 export async function resetStudentPassword(studentId: string, teacherId: string, teacherName: string): Promise<void> {
   const { error } = await supabase.from('profiles').update({ status: 'pending_password_reset', must_change_password: true }).eq('id', studentId);
   if (error) throw error;

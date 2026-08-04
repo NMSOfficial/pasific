@@ -1,18 +1,25 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { useMockState } from '../../mock/useMockStore';
+import type { CatalogTopic } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchCatalogTopic } from '../../services/contentData';
 
 export function CatalogTopicPage() {
   const { t } = useTranslation();
   const { topicId } = useParams();
-  const state = useMockState();
-  const topic = state.catalogTopics.find((t2) => t2.id === topicId);
+  const [topic, setTopic] = useState<CatalogTopic | null | undefined>(undefined);
 
-  if (!topic) return <Navigate to="/student/catalog" replace />;
+  useEffect(() => {
+    if (topicId) fetchCatalogTopic(topicId).then(setTopic);
+  }, [topicId]);
+
+  if (topic === null) return <Navigate to="/student/catalog" replace />;
+  if (topic === undefined) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -70,23 +77,6 @@ export function CatalogTopicPage() {
         {topic.tags.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {topic.tags.map((tag) => <span key={tag} className="badge badge--neutral">{tag}</span>)}
-          </div>
-        )}
-
-        {topic.relatedExampleIds.length > 0 && (
-          <div>
-            <p className="field__label" style={{ marginBottom: 'var(--space-2)' }}>{t('catalog.relatedExamples')}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {topic.relatedExampleIds.map((id) => {
-                const example = state.examples.find((e) => e.id === id);
-                if (!example) return null;
-                return (
-                  <Link key={id} to={`/student/examples/${id}`} className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }}>
-                    {example.title}
-                  </Link>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>

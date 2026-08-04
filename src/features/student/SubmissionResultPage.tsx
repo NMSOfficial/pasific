@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getAssignment, getSubmission } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { StudentProfile, WritingAnnotation } from '../../types/entities';
+import type { Assignment, StudentProfile, Submission, WritingAnnotation } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
@@ -18,26 +16,40 @@ import { RecommendationCard } from '../../components/RecommendationCard';
 import { FeedbackTabs } from '../../components/FeedbackTabs';
 import { MobileBottomSheet } from '../../components/MobileBottomSheet';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { useIsMobile } from '../../utils/useIsMobile';
 import { formatDateTime } from '../../utils/format';
 import { exportSubmissionResultPdf } from '../../utils/pdf';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchSubmission, retryAiGrading } from '../../services/submissionData';
 
 export function SubmissionResultPage({ portfolioContext = false }: { portfolioContext?: boolean } = {}) {
   const { t, i18n } = useTranslation();
   const { submissionId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<WritingAnnotation | null>(null);
 
-  const submission = submissionId ? getSubmission(state, submissionId) : undefined;
+  const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
+  const [assignment, setAssignment] = useState<Assignment | undefined>(undefined);
+
+  const reload = useCallback(() => {
+    if (!submissionId) return;
+    fetchSubmission(submissionId).then(async (sub) => {
+      setSubmission(sub);
+      if (sub?.assignmentId) setAssignment((await fetchAssignment(sub.assignmentId)) ?? undefined);
+    });
+  }, [submissionId]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (submission === undefined) return <LoadingSkeleton height="12rem" />;
   if (!submission || submission.studentId !== student.id) {
     return <Navigate to={portfolioContext ? '/student/portfolio' : '/student/assignments'} replace />;
   }
 
-  const assignment = submission.assignmentId ? getAssignment(state, submission.assignmentId) : undefined;
   const backTo = portfolioContext ? '/student/portfolio' : '/student/assignments';
   const backLabel = portfolioContext ? t('nav.student.portfolio') : t('nav.student.assignments');
 
@@ -61,7 +73,7 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
         <div className="state-panel">
           <AlertCircle size={36} color="var(--color-error)" aria-hidden="true" />
           <p className="state-panel__title">{t('submissionStatus.gradingFailed')}</p>
-          <button type="button" className="btn btn--primary" onClick={() => mockStore.retryAiGrading(submission.id)}>
+          <button type="button" className="btn btn--primary" onClick={async () => { await retryAiGrading(submission.id); reload(); }}>
             {t('submissionStatus.retry')}
           </button>
           <Link to={backTo} className="btn btn--secondary">{backLabel}</Link>

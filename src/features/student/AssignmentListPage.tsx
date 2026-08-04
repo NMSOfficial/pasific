@@ -1,31 +1,43 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignmentsForClass, getSubmissionForAssignment, getTeacher } from '../../mock/selectors';
-import type { StudentProfile, SubmissionStatus } from '../../types/entities';
+import type { Assignment, StudentProfile, SubmissionStatus } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { AssignmentCard } from '../../components/AssignmentCard';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchAssignmentsForClasses } from '../../services/assignmentData';
+import { fetchUserDisplayName } from '../../services/teacherData';
+import { fetchSubmissionForAssignment } from '../../services/submissionData';
 
 const STATUS_FILTERS: (SubmissionStatus | 'all')[] = ['all', 'not_started', 'in_progress', 'submitted', 'analyzing', 'result_ready', 'teacher_review_pending'];
+
+interface Row {
+  assignment: Assignment;
+  status: SubmissionStatus;
+  submissionId?: string;
+  teacherName?: string;
+}
 
 export function AssignmentListPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
   const [statusFilter, setStatusFilter] = useState<SubmissionStatus | 'all'>('all');
+  const [rows, setRows] = useState<Row[] | null>(null);
 
-  const rows = useMemo(() => {
-    const assignments = [...new Set(student.classIds.flatMap((cid) => getAssignmentsForClass(state, cid)))]
-      .filter((a) => a.status !== 'draft')
-      .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
-    return assignments.map((a) => {
-      const sub = getSubmissionForAssignment(state, a.id, student.id);
-      return { assignment: a, status: sub?.status ?? ('not_started' as SubmissionStatus), submissionId: sub?.id, teacher: getTeacher(state, a.createdBy) };
+  useEffect(() => {
+    fetchAssignmentsForClasses(student.classIds).then(async (list) => {
+      const assignments = list.filter((a) => a.status !== 'draft').sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+      const result = await Promise.all(assignments.map(async (a) => {
+        const [sub, teacherName] = await Promise.all([fetchSubmissionForAssignment(a.id, student.id), fetchUserDisplayName(a.createdBy)]);
+        return { assignment: a, status: sub?.status ?? ('not_started' as SubmissionStatus), submissionId: sub?.id, teacherName };
+      }));
+      setRows(result);
     });
-  }, [state, student]);
+  }, [student.id, student.classIds]);
+
+  if (!rows) return <LoadingSkeleton height="12rem" />;
 
   const filtered = statusFilter === 'all' ? rows : rows.filter((r) => r.status === statusFilter);
 
@@ -50,12 +62,12 @@ export function AssignmentListPage() {
         <EmptyState title={t('student.home.noAssignedTasks')} description={t('student.home.noAssignedTasksDescription')} />
       ) : (
         <div className="card-grid">
-          {filtered.map(({ assignment, status, submissionId, teacher }) => (
+          {filtered.map(({ assignment, status, submissionId, teacherName }) => (
             <AssignmentCard
               key={assignment.id}
               assignment={assignment}
               status={status}
-              teacherName={teacher?.displayName}
+              teacherName={teacherName}
               submissionId={submissionId}
             />
           ))}

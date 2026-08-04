@@ -1,36 +1,39 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, CartesianGrid } from 'recharts';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { computePortfolioMetrics } from '../../mock/selectors';
+import { computePortfolioMetrics } from '../../utils/portfolio';
 import { findErrorCategory } from '../../mock/errorCategories';
 import { WRITING_TYPES } from '../../mock/writingTypes';
-import type { StudentProfile } from '../../types/entities';
+import type { StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { formatDate } from '../../utils/format';
 import { exportPortfolioPdf } from '../../utils/pdf';
+import { fetchSubmissionsForStudents } from '../../services/submissionData';
 
 export function StudentPortfolioPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
   const [source, setSource] = useState<'all' | 'assignment' | 'practice'>('all');
+  const [submissions, setSubmissions] = useState<Submission[] | null>(null);
 
-  const portfolio = computePortfolioMetrics(state, student.id);
+  useEffect(() => { fetchSubmissionsForStudents([student.id]).then(setSubmissions); }, [student.id]);
 
-  const history = useMemo(() => {
-    return state.submissions
-      .filter((s) => s.studentId === student.id && (s.status === 'result_ready'))
-      .filter((s) => source === 'all' || (source === 'practice' ? s.isPractice : !s.isPractice))
-      .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
-  }, [state.submissions, student.id, source]);
+  if (!submissions) return <LoadingSkeleton height="12rem" />;
+
+  const portfolio = computePortfolioMetrics(student.id, submissions);
+
+  const history = submissions
+    .filter((s) => s.status === 'result_ready')
+    .filter((s) => source === 'all' || (source === 'practice' ? s.isPractice : !s.isPractice))
+    .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
 
   const scoreTrendData = portfolio.scoreTrend.map((p, i) => ({ name: `#${i + 1}`, score: p.score }));
   const errorData = portfolio.topErrorCategories.map((e) => ({

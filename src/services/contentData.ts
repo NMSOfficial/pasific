@@ -26,6 +26,11 @@ function mapCatalogTopic(row: Record<string, unknown>): CatalogTopic {
   };
 }
 
+export async function fetchCatalogTopic(id: string): Promise<CatalogTopic | null> {
+  const { data } = await supabase.from('catalog_topics').select('*').eq('id', id).maybeSingle();
+  return data ? mapCatalogTopic(data) : null;
+}
+
 export async function fetchGlobalCatalogTopics(): Promise<CatalogTopic[]> {
   const { data } = await supabase.from('catalog_topics').select('*').eq('visibility', 'global').order('updated_at', { ascending: false });
   return (data ?? []).map(mapCatalogTopic);

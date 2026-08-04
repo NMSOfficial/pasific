@@ -1,25 +1,31 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PenSquare } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import type { StudentProfile } from '../../types/entities';
+import type { StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { SubmissionStatusBadge } from '../../components/StatusBadge';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
+import { fetchSubmissionsForStudents } from '../../services/submissionData';
 
 export function PracticeHomePage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
+  const [practiceSubs, setPracticeSubs] = useState<Submission[] | null>(null);
 
-  const practiceSubs = state.submissions
-    .filter((s) => s.isPractice && s.studentId === student.id)
-    .sort((a, b) => (b.lastSavedAt ?? '').localeCompare(a.lastSavedAt ?? ''));
+  useEffect(() => {
+    fetchSubmissionsForStudents([student.id], { practiceOnly: true }).then((subs) =>
+      setPracticeSubs(subs.sort((a, b) => (b.lastSavedAt ?? '').localeCompare(a.lastSavedAt ?? ''))),
+    );
+  }, [student.id]);
+
+  if (!practiceSubs) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>

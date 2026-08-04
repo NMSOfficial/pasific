@@ -1,27 +1,44 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PenSquare, ArrowRight, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignmentsForClass, getSubmissionForAssignment, getTeacher, computePortfolioMetrics } from '../../mock/selectors';
-import type { StudentProfile } from '../../types/entities';
+import { computePortfolioMetrics } from '../../utils/portfolio';
+import type { Assignment, StudentProfile, Submission } from '../../types/entities';
 import { AssignmentCard } from '../../components/AssignmentCard';
 import { EmptyState } from '../../components/EmptyState';
 import { ScoreRing } from '../../components/ScoreRing';
 import { CriterionScoreBar } from '../../components/CriterionScoreBar';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchAssignmentsForClasses } from '../../services/assignmentData';
+import { fetchUserDisplayName } from '../../services/teacherData';
+import { fetchSubmissionsForStudents, fetchSubmissionForAssignment } from '../../services/submissionData';
 
 export function StudentHomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
 
-  const assignments = [...new Set(student.classIds.flatMap((cid) => getAssignmentsForClass(state, cid)))]
-    .filter((a) => a.status === 'published')
-    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
-    .slice(0, 4);
+  const [assignments, setAssignments] = useState<{ assignment: Assignment; status: Submission['status']; teacherName?: string; submissionId?: string }[] | null>(null);
+  const [allSubs, setAllSubs] = useState<Submission[]>([]);
 
-  const allSubs = state.submissions.filter((s) => s.studentId === student.id);
+  useEffect(() => {
+    fetchAssignmentsForClasses(student.classIds).then(async (list) => {
+      const upcoming = list
+        .filter((a) => a.status === 'published')
+        .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+        .slice(0, 4);
+      const rows = await Promise.all(upcoming.map(async (a) => {
+        const [sub, teacherName] = await Promise.all([fetchSubmissionForAssignment(a.id, student.id), fetchUserDisplayName(a.createdBy)]);
+        return { assignment: a, status: sub?.status ?? ('not_started' as Submission['status']), teacherName, submissionId: sub?.id };
+      }));
+      setAssignments(rows);
+    });
+    fetchSubmissionsForStudents([student.id]).then(setAllSubs);
+  }, [student.id, student.classIds]);
+
+  if (!assignments) return <LoadingSkeleton height="12rem" />;
+
   const recentResult = allSubs
     .filter((s) => s.status === 'result_ready' && s.finalScore !== undefined)
     .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''))[0];
@@ -30,7 +47,7 @@ export function StudentHomePage() {
     ? [...recentResult.criterionScores].sort((a, b) => (a.teacherScore ?? a.aiScore) - (b.teacherScore ?? b.aiScore))[0]
     : undefined;
 
-  const portfolio = computePortfolioMetrics(state, student.id);
+  const portfolio = computePortfolioMetrics(student.id, allSubs);
 
   return (
     <>
@@ -54,19 +71,9 @@ export function StudentHomePage() {
           <EmptyState title={t('student.home.noAssignedTasks')} description={t('student.home.noAssignedTasksDescription')} />
         ) : (
           <div className="card-grid">
-            {assignments.map((a) => {
-              const sub = getSubmissionForAssignment(state, a.id, student.id);
-              const teacher = getTeacher(state, a.createdBy);
-              return (
-                <AssignmentCard
-                  key={a.id}
-                  assignment={a}
-                  status={sub?.status ?? 'not_started'}
-                  teacherName={teacher?.displayName}
-                  submissionId={sub?.id}
-                />
-              );
-            })}
+            {assignments.map(({ assignment, status, teacherName, submissionId }) => (
+              <AssignmentCard key={assignment.id} assignment={assignment} status={status} teacherName={teacherName} submissionId={submissionId} />
+            ))}
           </div>
         )}
       </section>

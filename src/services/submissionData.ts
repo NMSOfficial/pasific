@@ -1,6 +1,9 @@
 import { supabase } from './supabaseClient';
 import type { CriterionScore, StudyRecommendation, Submission, TeacherOverride, WritingAnnotation } from '../types/entities';
 import { recomputeFinalScore } from '../utils/portfolio';
+import { gradeWithAi } from './aiGrading';
+import { standardCriteria } from '../mock/rubric';
+import { fetchAssignment } from './assignmentData';
 
 function mapCriterionScore(row: Record<string, unknown>): CriterionScore {
   return {
@@ -227,4 +230,126 @@ export async function publishTeacherReview(submissionId: string, feedback: strin
 export async function retryAiGrading(submissionId: string): Promise<void> {
   const { error } = await supabase.from('submissions').update({ status: 'analyzing' }).eq('id', submissionId).eq('status', 'grading_failed');
   if (error) throw error;
+  await runGrading(submissionId);
+}
+
+export async function fetchSubmissionForAssignment(assignmentId: string, studentId: string): Promise<Submission | null> {
+  const { data } = await supabase
+    .from('submissions')
+    .select('*')
+    .eq('assignment_id', assignmentId)
+    .eq('student_id', studentId)
+    .eq('is_practice', false)
+    .maybeSingle();
+  if (!data) return null;
+  const [full] = await assembleSubmissions([data]);
+  return full ?? null;
+}
+
+export async function createDraftSubmission(input: {
+  assignmentId?: string;
+  isPractice: boolean;
+  studentId: string;
+  schoolId: string;
+  writingTypeId: string;
+  level: string;
+  topicTitle: string;
+  scoreVisibleToStudent?: boolean;
+}): Promise<Submission> {
+  const { data, error } = await supabase
+    .from('submissions')
+    .insert({
+      assignment_id: input.assignmentId,
+      is_practice: input.isPractice,
+      student_id: input.studentId,
+      school_id: input.schoolId,
+      writing_type_id: input.writingTypeId,
+      level: input.level,
+      topic_title: input.topicTitle,
+      text: '',
+      word_count: 0,
+      status: 'in_progress',
+      last_saved_at: new Date().toISOString(),
+      score_visible_to_student: input.scoreVisibleToStudent ?? true,
+      uses_custom_rubric: false,
+    })
+    .select('*')
+    .single();
+  if (error || !data) throw error ?? new Error('submission_create_failed');
+  const [full] = await assembleSubmissions([data]);
+  return full;
+}
+
+async function runGrading(submissionId: string): Promise<void> {
+  const sub = await fetchSubmission(submissionId);
+  if (!sub) return;
+
+  const assignment = sub.assignmentId ? await fetchAssignment(sub.assignmentId) : null;
+  const criteria = (assignment?.rubric.criteria ?? standardCriteria()).filter((c) => c.enabled);
+
+  try {
+    const result = await gradeWithAi({
+      text: sub.text,
+      writingTypeId: sub.writingTypeId,
+      level: sub.level,
+      assignmentPrompt: assignment?.prompt,
+      minWords: assignment?.minWords,
+      maxWords: assignment?.maxWords,
+      criteria,
+    });
+
+    await supabase.from('criterion_scores').insert(
+      result.criterionScores.map((c) => ({
+        submission_id: submissionId,
+        criterion_id: c.criterionId,
+        criterion_key: c.criterionKey,
+        ai_score: c.aiScore,
+        max_score: c.maxScore,
+        weight: c.weight,
+        explanation: c.explanation,
+        evidence_quote: c.evidenceQuote,
+        strong_aspects: c.strongAspects,
+        development_areas: c.developmentAreas,
+      })),
+    );
+
+    if (result.annotations.length) {
+      await supabase.from('writing_annotations').insert(
+        result.annotations.map((a) => ({
+          submission_id: submissionId,
+          start_pos: a.start,
+          end_pos: a.end,
+          quoted_text: a.quotedText,
+          severity: a.severity,
+          category_id: a.categoryId,
+          explanation: a.explanation,
+          hint: a.hint,
+          suggested_correction: a.suggestedCorrection,
+        })),
+      );
+    }
+
+    const overall = recomputeFinalScore(result.criterionScores);
+    await supabase
+      .from('submissions')
+      .update({
+        ai_score: overall,
+        final_score: sub.scoreVisibleToStudent ? overall : null,
+        status: sub.assignmentId ? 'teacher_review_pending' : 'result_ready',
+      })
+      .eq('id', submissionId);
+  } catch (err) {
+    console.error('[grading] request failed:', err);
+    await supabase.from('submissions').update({ status: 'grading_failed' }).eq('id', submissionId);
+  }
+}
+
+export async function submitSubmission(submissionId: string): Promise<void> {
+  const { data: current } = await supabase.from('submissions').select('status').eq('id', submissionId).maybeSingle();
+  if (!current || (current.status !== 'not_started' && current.status !== 'in_progress')) return;
+
+  const now = new Date().toISOString();
+  await supabase.from('submissions').update({ status: 'submitted', submitted_at: now, last_saved_at: now }).eq('id', submissionId);
+  await supabase.from('submissions').update({ status: 'analyzing' }).eq('id', submissionId);
+  await runGrading(submissionId);
 }
