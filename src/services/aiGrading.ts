@@ -1,4 +1,7 @@
 import type { CefrLevel, CriterionScore, RubricCriterion, WritingAnnotation, WritingTypeId } from '../types/entities';
+import { supabase } from './supabaseClient';
+
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 export interface GradeInput {
   text: string;
@@ -45,9 +48,12 @@ interface GradeApiResponse {
 }
 
 export async function gradeWithAi(input: GradeInput): Promise<GradeResult> {
-  const res = await fetch('/api/grade', {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+
+  const res = await fetch(`${API_BASE}/api/grade`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
     body: JSON.stringify({
       text: input.text,
       writingTypeId: input.writingTypeId,
