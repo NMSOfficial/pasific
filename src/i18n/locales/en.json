@@ -566,6 +566,9 @@
   "video": {
     "watchExplainer": "Watch: {{title}}"
   },
+  "guide": {
+    "keyPhrases": "Useful phrases"
+  },
   "practice": {
     "newTitle": "New Writing Practice",
     "step1": "Choose a writing type and level",

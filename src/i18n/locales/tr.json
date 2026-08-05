@@ -566,6 +566,9 @@
   "video": {
     "watchExplainer": "İzle: {{title}}"
   },
+  "guide": {
+    "keyPhrases": "Faydalı ifadeler"
+  },
   "practice": {
     "newTitle": "Yeni Writing Çalışması",
     "step1": "Bir yazı türü ve seviye seç",

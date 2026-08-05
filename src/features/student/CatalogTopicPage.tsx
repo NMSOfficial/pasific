@@ -8,14 +8,17 @@ import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { VideoLink } from '../../components/VideoLink';
+import { GuidePanel } from '../../components/GuidePanel';
 import { fetchCatalogTopic } from '../../services/contentData';
 import { fetchVideoForWritingType, type ReferenceVideo } from '../../services/videoData';
+import { fetchGuideForWritingType, type WritingTypeGuide } from '../../services/guideData';
 
 export function CatalogTopicPage() {
   const { t } = useTranslation();
   const { topicId } = useParams();
   const [topic, setTopic] = useState<CatalogTopic | null | undefined>(undefined);
   const [video, setVideo] = useState<ReferenceVideo | null>(null);
+  const [guide, setGuide] = useState<WritingTypeGuide | null>(null);
 
   useEffect(() => {
     if (topicId) fetchCatalogTopic(topicId).then(setTopic);
@@ -23,6 +26,7 @@ export function CatalogTopicPage() {
 
   useEffect(() => {
     if (topic) fetchVideoForWritingType(topic.writingTypeId).then(setVideo);
+    if (topic) fetchGuideForWritingType(topic.writingTypeId).then(setGuide);
   }, [topic]);
 
   if (topic === null) return <Navigate to="/student/catalog" replace />;
@@ -45,6 +49,7 @@ export function CatalogTopicPage() {
 
         <p style={{ lineHeight: 'var(--leading-relaxed)' }}>{topic.prompt}</p>
 
+        <GuidePanel guide={guide} />
         <VideoLink video={video} />
 
         <div className="assignment-card__meta" style={{ fontSize: 'var(--text-sm)' }}>
