@@ -111,7 +111,6 @@ export function AppRoutes() {
         <Route path="assignments/:assignmentId/results" element={<AssignmentResultsPage />} />
         <Route path="submissions/:submissionId" element={<TeacherSubmissionReviewPage />} />
         <Route path="catalog" element={<SchoolCatalogPage />} />
-        <Route path="catalog/new" element={<PlaceholderPage titleKey="nav.teacher.catalog" />} />
         <Route path="reports" element={<TeacherReportsPage />} />
         <Route path="school" element={<SchoolSettingsPage />} />
         <Route path="team" element={<TeamPage />} />

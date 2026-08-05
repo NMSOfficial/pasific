@@ -8,6 +8,8 @@
     "loading": "Yükleniyor…",
     "role": "Rol",
     "save": "Kaydet",
+    "saveSuccess": "Kaydedildi",
+    "saveError": "Kaydedilemedi. Tekrar deneyin.",
     "cancel": "Vazgeç",
     "close": "Kapat",
     "back": "Geri",
@@ -536,7 +538,8 @@
     "settings": {
       "platformName": "Platform adı",
       "defaultLanguage": "Varsayılan dil",
-      "maintenanceMode": "Bakım modu"
+      "maintenanceMode": "Bakım modu",
+      "maintenanceBannerMessage": "Pasific şu anda planlı bakımda. Bazı özellikler geçici olarak kullanılamayabilir."
     }
   },
   "settings": {

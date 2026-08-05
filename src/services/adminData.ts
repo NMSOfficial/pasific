@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import type { AuditEvent, TeacherPermissionKey } from '../types/entities';
+import type { AuditEvent, CefrLevel, TeacherPermissionKey } from '../types/entities';
 
 type Actor = { id: string; displayName: string };
 
@@ -87,6 +87,11 @@ export async function fetchSchool(schoolId: string): Promise<SchoolSummary | nul
 
 export async function createSchool(input: { name: string; city: string }): Promise<void> {
   const { error } = await supabase.from('schools').insert({ name: input.name, city: input.city });
+  if (error) throw error;
+}
+
+export async function updateSchool(schoolId: string, input: { name: string; city: string }): Promise<void> {
+  const { error } = await supabase.from('schools').update({ name: input.name, city: input.city || null }).eq('id', schoolId);
   if (error) throw error;
 }
 
@@ -291,6 +296,46 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
     activeAssignmentCount: activeAssignmentCount ?? 0,
     recentSchools: schools.slice(0, 5),
   };
+}
+
+export interface PlatformSettings {
+  platformName: string;
+  maintenanceMode: boolean;
+}
+
+const PLATFORM_SETTINGS_ID = 1;
+
+export async function fetchPlatformSettings(): Promise<PlatformSettings> {
+  const { data, error } = await supabase.from('platform_settings').select('*').eq('id', PLATFORM_SETTINGS_ID).maybeSingle();
+  if (error) throw error;
+  return {
+    platformName: (data?.platform_name as string | undefined) ?? 'Pasific',
+    maintenanceMode: (data?.maintenance_mode as boolean | undefined) ?? false,
+  };
+}
+
+export async function updatePlatformSettings(input: PlatformSettings): Promise<void> {
+  const { error } = await supabase
+    .from('platform_settings')
+    .update({ platform_name: input.platformName, maintenance_mode: input.maintenanceMode })
+    .eq('id', PLATFORM_SETTINGS_ID);
+  if (error) throw error;
+}
+
+export async function fetchLevelDescriptors(): Promise<Record<CefrLevel, string>> {
+  const { data, error } = await supabase.from('cefr_level_descriptors').select('*');
+  if (error) throw error;
+  const map = {} as Record<CefrLevel, string>;
+  for (const row of data ?? []) map[row.level as CefrLevel] = row.descriptor as string;
+  return map;
+}
+
+export async function updateLevelDescriptor(level: CefrLevel, descriptor: string): Promise<void> {
+  const { error } = await supabase
+    .from('cefr_level_descriptors')
+    .update({ descriptor, updated_at: new Date().toISOString() })
+    .eq('level', level);
+  if (error) throw error;
 }
 
 async function logAudit(type: AuditEvent['type'], actor: Actor, targetLabel: string, detail: string): Promise<void> {

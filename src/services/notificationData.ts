@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 export interface AppNotification {
   id: string;
-  type: 'grade_ready' | 'new_assignment' | 'teacher_review_needed';
+  type: 'grade_ready' | 'new_assignment' | 'teacher_review_needed' | 'assignment_due_soon';
   title: string;
   body?: string;
   link?: string;

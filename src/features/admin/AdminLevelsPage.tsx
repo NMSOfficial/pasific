@@ -1,21 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { CefrLevel } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchLevelDescriptors, updateLevelDescriptor } from '../../services/adminData';
 
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
-
-const DEFAULT_DESCRIPTORS: Record<CefrLevel, string> = {
-  B1: 'Can write straightforward, connected texts on familiar topics using simple linking words. Vocabulary and grammar cover everyday needs with noticeable but non-disruptive errors.',
-  B2: 'Can write clear, detailed texts on a range of subjects, developing an argument with supporting points. Good control of grammar and a fairly wide vocabulary range.',
-  C1: 'Can write well-structured, detailed texts on complex subjects, using organisational patterns and cohesive devices effectively. Wide vocabulary used with precision.',
-  C2: 'Can write clear, smoothly flowing, complex texts in an appropriate and effective style with a logical structure that helps the reader find significant points.',
-};
 
 export function AdminLevelsPage() {
   const { t } = useTranslation();
   const [level, setLevel] = useState<CefrLevel>('B2');
-  const [descriptors, setDescriptors] = useState(DEFAULT_DESCRIPTORS);
+  const [descriptors, setDescriptors] = useState<Record<CefrLevel, string> | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => { fetchLevelDescriptors().then(setDescriptors); }, []);
+
+  if (!descriptors) return <LoadingSkeleton height="12rem" />;
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      await updateLevelDescriptor(level, descriptors[level]);
+      setMessage({ kind: 'success', text: t('common.saveSuccess') });
+    } catch {
+      setMessage({ kind: 'error', text: t('common.saveError') });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <>
@@ -23,7 +38,7 @@ export function AdminLevelsPage() {
 
       <div className="segmented-control" style={{ marginBottom: 'var(--space-5)' }}>
         {LEVELS.map((l) => (
-          <button key={l} type="button" className={`segmented-control__option ${level === l ? 'is-active' : ''}`} onClick={() => setLevel(l)}>{l}</button>
+          <button key={l} type="button" className={`segmented-control__option ${level === l ? 'is-active' : ''}`} onClick={() => { setLevel(l); setMessage(null); }}>{l}</button>
         ))}
       </div>
 
@@ -34,9 +49,15 @@ export function AdminLevelsPage() {
           className="textarea-control"
           rows={5}
           value={descriptors[level]}
-          onChange={(e) => setDescriptors((prev) => ({ ...prev, [level]: e.target.value }))}
+          onChange={(e) => setDescriptors((prev) => (prev ? { ...prev, [level]: e.target.value } : prev))}
         />
-        <button type="button" className="btn btn--primary" style={{ alignSelf: 'flex-start' }}>{t('common.save')}</button>
+        {message && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', fontSize: 'var(--text-sm)', color: message.kind === 'success' ? 'var(--color-success)' : 'var(--color-error)' }}>
+            {message.kind === 'success' ? <CheckCircle2 size={16} aria-hidden="true" /> : <AlertCircle size={16} aria-hidden="true" />}
+            {message.text}
+          </div>
+        )}
+        <button type="button" className="btn btn--primary" style={{ alignSelf: 'flex-start' }} disabled={saving || !descriptors[level].trim()} onClick={handleSave}>{t('common.save')}</button>
       </div>
     </>
   );

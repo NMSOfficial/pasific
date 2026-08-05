@@ -7,6 +7,7 @@ import { DesktopSidebar } from './DesktopSidebar';
 import { MobileBottomNavigation } from './MobileBottomNavigation';
 import { MobileMenuDrawer } from './MobileMenuDrawer';
 import { TopHeader } from './TopHeader';
+import { MaintenanceBanner } from './MaintenanceBanner';
 
 interface AppShellProps {
   sidebarItems: NavItem[];
@@ -24,6 +25,7 @@ export function AppShell({ sidebarItems, bottomNavItems }: AppShellProps) {
       <DesktopSidebar items={sidebarItems} collapsed={collapsed} onToggleCollapsed={() => setCollapsed((v) => !v)} />
       <div className="main-content">
         <TopHeader onOpenMobileMenu={() => setDrawerOpen(true)} />
+        <MaintenanceBanner />
         <main id={a11ySkipLinkTargetId} className="main-content__body" tabIndex={-1}>
           <div className="container" style={{ paddingInline: 0 }}>
             <Outlet />

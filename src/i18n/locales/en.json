@@ -8,6 +8,8 @@
     "loading": "Loading…",
     "role": "Role",
     "save": "Save",
+    "saveSuccess": "Saved",
+    "saveError": "Couldn't save. Try again.",
     "cancel": "Cancel",
     "close": "Close",
     "back": "Back",
@@ -536,7 +538,8 @@
     "settings": {
       "platformName": "Platform name",
       "defaultLanguage": "Default language",
-      "maintenanceMode": "Maintenance mode"
+      "maintenanceMode": "Maintenance mode",
+      "maintenanceBannerMessage": "Pasific is currently undergoing scheduled maintenance. Some features may be temporarily unavailable."
     }
   },
   "settings": {
