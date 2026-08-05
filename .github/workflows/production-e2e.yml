@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 25
     env:
       APP_ORIGIN: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app
-      VERCEL_SHARE_URL: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app/?_vercel_share=mpeBDcxcDp2cgMSPOJjyziEMqrJQ8W2O
+      VERCEL_SHARE_URL: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app/?_vercel_share=Fb11Yw8HVBL0gJ4VIYmDGIKoaiXPFV1G
       SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
       API_URL: https://pasific-production.up.railway.app
       TEST_PASSWORD: PasificE2E2026!
