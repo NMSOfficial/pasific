@@ -1,0 +1,56 @@
+name: Production E2E
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      APP_ORIGIN: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app
+      VERCEL_SHARE_URL: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app/?_vercel_share=mpeBDcxcDp2cgMSPOJjyziEMqrJQ8W2O
+      SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
+      API_URL: https://pasific-production.up.railway.app
+      TEST_PASSWORD: PasificE2E2026!
+      ADMIN_USERNAME: e2e-admin-260806
+      TEACHER_USERNAME: e2e-teacher-260806
+      STUDENT_CODE: E2E-STUDENT-260806
+      STUDENT_USERNAME: e2e-student-260806
+      OUTSIDER_CODE: E2E-OUTSIDE-260806
+      OUTSIDER_USERNAME: e2e-outsider-260806
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run production E2E
+        run: node scripts/production-e2e.mjs
+
+      - name: Upload production E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-e2e-report
+          path: test-results/production-e2e
+          if-no-files-found: warn
+          retention-days: 7
