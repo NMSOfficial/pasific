@@ -1,45 +1,64 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PlusCircle, ClipboardCheck, Users, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignmentsForTeacher, getClass, getStudent } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { TeacherProfile } from '../../types/entities';
+import type { Assignment, StudentProfile, Submission, TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
+import { fetchTeacherClasses, fetchStudentsByIds } from '../../services/teacherData';
+import { fetchAssignmentsForTeacher } from '../../services/assignmentData';
+import { fetchSubmissionsForStudents } from '../../services/submissionData';
 
 export function TeacherDashboardPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
 
-  const classes = teacher.classIds.map((id) => getClass(state, id)).filter(Boolean);
-  const assignments = getAssignmentsForTeacher(state, teacher);
-  const classStudentIds = new Set(classes.flatMap((c) => c!.studentIds));
+  const [classCount, setClassCount] = useState<number | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [studentsById, setStudentsById] = useState<Map<string, StudentProfile>>(new Map());
 
-  const teacherSubmissions = state.submissions.filter((s) => classStudentIds.has(s.studentId) && !s.isPractice);
-  const awaitingReview = teacherSubmissions.filter((s) => s.status === 'teacher_review_pending');
-  const recent = [...teacherSubmissions]
+  useEffect(() => {
+    fetchTeacherClasses(teacher.id).then(async (classes) => {
+      setClassCount(classes.length);
+      const studentIds = [...new Set(classes.flatMap((c) => c.studentIds))];
+      const [students, subs, assignmentsData] = await Promise.all([
+        fetchStudentsByIds(studentIds),
+        fetchSubmissionsForStudents(studentIds, { excludePractice: true }),
+        fetchAssignmentsForTeacher(teacher.id),
+      ]);
+      setStudentsById(new Map(students.map((s) => [s.id, s])));
+      setSubmissions(subs);
+      setAssignments(assignmentsData);
+    });
+  }, [teacher.id]);
+
+  if (classCount === null) return <LoadingSkeleton height="12rem" />;
+
+  const awaitingReview = submissions.filter((s) => s.status === 'teacher_review_pending');
+  const recent = [...submissions]
     .filter((s) => s.submittedAt)
     .sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''))
     .slice(0, 5);
 
   const errorCounts = new Map<string, number>();
-  for (const s of teacherSubmissions) {
+  for (const s of submissions) {
     for (const a of s.annotations) errorCounts.set(a.categoryId, (errorCounts.get(a.categoryId) ?? 0) + 1);
   }
   const topError = [...errorCounts.entries()].sort((a, b) => b[1] - a[1])[0];
 
-  const needsSupport = teacherSubmissions
+  const needsSupport = submissions
     .filter((s) => s.finalScore !== undefined && s.finalScore < 65)
-    .map((s) => getStudent(state, s.studentId))
-    .filter(Boolean)
-    .filter((s, i, arr) => arr.findIndex((x) => x!.id === s!.id) === i)
+    .map((s) => studentsById.get(s.studentId))
+    .filter((s): s is StudentProfile => !!s)
+    .filter((s, i, arr) => arr.findIndex((x) => x.id === s.id) === i)
     .slice(0, 5);
 
   const recentAssignments = [...assignments].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
@@ -52,7 +71,7 @@ export function TeacherDashboardPage() {
       />
 
       <div className="stat-row" style={{ marginBottom: 'var(--space-8)' }}>
-        <div className="stat-tile"><span className="stat-tile__value">{classes.length}</span><span className="stat-tile__label">{t('teacher.dashboard.activeClasses')}</span></div>
+        <div className="stat-tile"><span className="stat-tile__value">{classCount}</span><span className="stat-tile__label">{t('teacher.dashboard.activeClasses')}</span></div>
         <div className="stat-tile"><span className="stat-tile__value">{awaitingReview.length}</span><span className="stat-tile__label">{t('teacher.dashboard.awaitingReview')}</span></div>
         <div className="stat-tile"><span className="stat-tile__value">{assignments.filter((a) => a.status === 'published').length}</span><span className="stat-tile__label">{t('assignmentStatus.published')}</span></div>
         <div className="stat-tile"><span className="stat-tile__value" style={{ fontSize: 'var(--text-md)' }}>{topError ? t(findErrorCategory(topError[0])?.nameKey ?? '') : '—'}</span><span className="stat-tile__label">{t('teacher.dashboard.frequentErrors')}</span></div>
@@ -65,7 +84,7 @@ export function TeacherDashboardPage() {
         ) : (
           <div className="card-grid">
             {awaitingReview.map((sub) => {
-              const student = getStudent(state, sub.studentId);
+              const student = studentsById.get(sub.studentId);
               return (
                 <div key={sub.id} className="card card--padded assignment-card">
                   <div className="assignment-card__badges">
@@ -89,7 +108,7 @@ export function TeacherDashboardPage() {
         ) : (
           <div className="card-grid">
             {recent.map((sub) => {
-              const student = getStudent(state, sub.studentId);
+              const student = studentsById.get(sub.studentId);
               return (
                 <Link key={sub.id} to={`/teacher/submissions/${sub.id}`} className="card card--padded card--interactive assignment-card">
                   <div className="assignment-card__badges">
@@ -112,9 +131,9 @@ export function TeacherDashboardPage() {
         ) : (
           <div className="card-grid">
             {needsSupport.map((s) => (
-              <Link key={s!.id} to={`/teacher/students/${s!.id}`} className="card card--padded card--interactive" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+              <Link key={s.id} to={`/teacher/students/${s.id}`} className="card card--padded card--interactive" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <AlertTriangle size={18} color="var(--color-warning)" aria-hidden="true" />
-                <span style={{ fontWeight: 'var(--weight-medium)' }}>{s!.displayName}</span>
+                <span style={{ fontWeight: 'var(--weight-medium)' }}>{s.displayName}</span>
               </Link>
             ))}
           </div>

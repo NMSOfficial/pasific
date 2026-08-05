@@ -1,28 +1,43 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { CalendarDays, Clock, User } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getAssignment, getSubmissionForAssignment, getTeacher } from '../../mock/selectors';
-import type { StudentProfile } from '../../types/entities';
+import type { Assignment, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { SubmissionStatusBadge, CustomRubricBadge } from '../../components/StatusBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDateTime } from '../../utils/format';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchUserDisplayName } from '../../services/teacherData';
+import { fetchSubmissionForAssignment } from '../../services/submissionData';
 
 export function AssignmentDetailPage() {
   const { t, i18n } = useTranslation();
   const { assignmentId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
 
-  const assignment = assignmentId ? getAssignment(state, assignmentId) : undefined;
-  if (!assignment) return <Navigate to="/student/assignments" replace />;
+  const [assignment, setAssignment] = useState<Assignment | null | undefined>(undefined);
+  const [submission, setSubmission] = useState<Submission | null>(null);
+  const [teacherName, setTeacherName] = useState<string | undefined>();
 
-  const submission = getSubmissionForAssignment(state, assignment.id, student.id);
-  const teacher = getTeacher(state, assignment.createdBy);
+  useEffect(() => {
+    if (!assignmentId) return;
+    fetchAssignment(assignmentId).then(async (a) => {
+      setAssignment(a);
+      if (!a) return;
+      const [sub, name] = await Promise.all([fetchSubmissionForAssignment(a.id, student.id), fetchUserDisplayName(a.createdBy)]);
+      setSubmission(sub);
+      setTeacherName(name);
+    });
+  }, [assignmentId, student.id]);
+
+  if (assignment === null) return <Navigate to="/student/assignments" replace />;
+  if (assignment === undefined) return <LoadingSkeleton height="12rem" />;
+
   const status = submission?.status ?? 'not_started';
 
   return (
@@ -68,7 +83,7 @@ export function AssignmentDetailPage() {
         )}
 
         <div className="assignment-card__meta" style={{ fontSize: 'var(--text-sm)' }}>
-          {teacher && <span className="assignment-card__meta-item"><User size={14} aria-hidden="true" />{teacher.displayName}</span>}
+          {teacherName && <span className="assignment-card__meta-item"><User size={14} aria-hidden="true" />{teacherName}</span>}
           <span className="assignment-card__meta-item"><CalendarDays size={14} aria-hidden="true" />{t('student.assignment.due')}: {formatDateTime(assignment.dueAt, i18n.resolvedLanguage ?? 'tr')}</span>
           <span className="assignment-card__meta-item">{assignment.suggestedMinWords}–{assignment.suggestedMaxWords} {t('common.words')}</span>
           {assignment.timeLimitMinutes && (

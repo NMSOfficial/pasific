@@ -1,38 +1,40 @@
-import { useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { PlusCircle } from 'lucide-react';
-import { useMockState, mockStore } from '../../mock/useMockStore';
 import { PageHeader } from '../../components/PageHeader';
 import { PdfExportButton } from '../../components/PdfExportButton';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
 import { exportSchoolUsagePdf } from '../../utils/pdf';
+import { fetchSchools, createSchool, type SchoolSummary } from '../../services/adminData';
 
 export function AdminSchoolListPage() {
   const { t, i18n } = useTranslation();
-  const state = useMockState();
+  const [schools, setSchools] = useState<SchoolSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
   const [city, setCity] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleCreate = () => {
+  const reload = useCallback(() => {
+    fetchSchools().then(setSchools);
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const handleCreate = async () => {
     if (!name.trim()) return;
-    mockStore.createSchool({
-      id: `school_${Date.now()}`,
-      name: name.trim(),
-      city: city.trim(),
-      status: 'active',
-      teacherCount: 0,
-      studentCount: 0,
-      classCount: 0,
-      activeAssignmentCount: 0,
-      lastActivityAt: new Date().toISOString(),
-      planStatus: 'pilot',
-    });
+    setSaving(true);
+    await createSchool({ name: name.trim(), city: city.trim() });
+    setSaving(false);
     setName('');
     setCity('');
     setCreating(false);
+    reload();
   };
+
+  if (!schools) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -44,8 +46,8 @@ export function AdminSchoolListPage() {
               label={t('admin.dashboard.schoolUsageSummary')}
               onExport={() => exportSchoolUsagePdf({
                 locale: i18n.resolvedLanguage ?? 'tr',
-                schools: state.schools.map((s) => ({
-                  name: s.name, city: s.city, teacherCount: s.teacherCount, studentCount: s.studentCount,
+                schools: schools.map((s) => ({
+                  name: s.name, city: s.city ?? '', teacherCount: s.teacherCount, studentCount: s.studentCount,
                   activeAssignmentCount: s.activeAssignmentCount, status: t(`accountStatus.${s.status === 'active' ? 'active' : 'suspended'}`),
                 })),
               })}
@@ -65,7 +67,7 @@ export function AdminSchoolListPage() {
             <label className="field__label" htmlFor="school-city">{t('admin.schools.city')}</label>
             <input id="school-city" className="input-control" value={city} onChange={(e) => setCity(e.target.value)} />
           </div>
-          <button type="button" className="btn btn--primary" onClick={handleCreate} disabled={!name.trim()}>{t('common.save')}</button>
+          <button type="button" className="btn btn--primary" onClick={handleCreate} disabled={!name.trim() || saving}>{t('common.save')}</button>
         </div>
       )}
 
@@ -83,9 +85,9 @@ export function AdminSchoolListPage() {
             </tr>
           </thead>
           <tbody>
-            {state.schools.map((school) => (
+            {schools.map((school) => (
               <tr key={school.id}>
-                <td>{school.name}<div className="field__hint">{school.city} · {formatDate(school.lastActivityAt, i18n.resolvedLanguage ?? 'tr')}</div></td>
+                <td>{school.name}<div className="field__hint">{school.city} · {formatDate(school.createdAt, i18n.resolvedLanguage ?? 'tr')}</div></td>
                 <td><span className={`badge badge--${school.status === 'active' ? 'success' : 'error'}`}>{t(`accountStatus.${school.status === 'active' ? 'active' : 'suspended'}`)}</span></td>
                 <td>{school.teacherCount}</td>
                 <td>{school.studentCount}</td>
@@ -99,7 +101,7 @@ export function AdminSchoolListPage() {
       </div>
 
       <div className="mobile-student-list">
-        {state.schools.map((school) => (
+        {schools.map((school) => (
           <div key={school.id} className="card card--padded" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ fontWeight: 'var(--weight-medium)' }}>{school.name}</span>

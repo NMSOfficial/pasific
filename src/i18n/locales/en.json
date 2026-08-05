@@ -6,6 +6,7 @@
   },
   "common": {
     "loading": "Loading…",
+    "role": "Role",
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
@@ -167,8 +168,16 @@
       "sendCode": "Send recovery code",
       "noRecoveryTitle": "No recovery details on file",
       "noRecoveryDescription": "This account has no recovery email or phone number. Please ask your teacher to reset your password.",
-      "checkInbox": "If an account matches, a recovery code has been sent.",
+      "checkInbox": "If an account matches, a recovery link has been sent to the email on file.",
       "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your account.",
+      "invalidTitle": "This link is invalid or has expired",
+      "invalidDescription": "Password reset links expire after a while. Request a new one to continue.",
+      "requestNewLink": "Request a new link",
+      "success": "Your password has been updated. You can now sign in with your new password."
     }
   },
   "roles": {
@@ -473,7 +482,10 @@
       "openSchool": "Open school",
       "classes": "Classes",
       "teachers": "Teachers",
-      "students": "Students"
+      "students": "Students",
+      "createClass": "Create class",
+      "className": "Class name",
+      "gradeLabel": "Grade label"
     },
     "users": {
       "createTeacher": "Create teacher account",
@@ -537,7 +549,17 @@
     "noRecoveryPhone": "No recovery phone number on file",
     "preferences": "Preferences",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "password": {
+      "title": "Change password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "success": "Your password has been updated.",
+      "mismatch": "Passwords do not match.",
+      "tooShort": "Password must be at least 8 characters.",
+      "error": "Could not update password. Please try again."
+    }
   },
   "portfolio": {
     "history": "Writing history",
@@ -548,6 +570,17 @@
     "practiceSource": "Independent practice",
     "customRubricNote": "Custom-rubric results are shown separately and excluded from trend charts.",
     "filterSource": "Source"
+  },
+  "video": {
+    "watchExplainer": "Watch: {{title}}"
+  },
+  "guide": {
+    "keyPhrases": "Useful phrases"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "You have no notifications yet."
   },
   "practice": {
     "newTitle": "New Writing Practice",

@@ -1,27 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { useMockState } from '../../mock/useMockStore';
-import type { CefrLevel, PerformanceBand } from '../../types/entities';
+import type { CefrLevel, PerformanceBand, WritingExample } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchExamples } from '../../services/exampleData';
 
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
 const BANDS: PerformanceBand[] = ['developing', 'meets_expectations', 'strong', 'advanced'];
 
 export function ExampleLibraryPage() {
   const { t } = useTranslation();
-  const state = useMockState();
+  const [allExamples, setAllExamples] = useState<WritingExample[] | null>(null);
   const [level, setLevel] = useState<CefrLevel | 'all'>('all');
   const [band, setBand] = useState<PerformanceBand | 'all'>('all');
 
+  useEffect(() => { fetchExamples().then(setAllExamples); }, []);
+
   const examples = useMemo(() => {
-    return state.examples
+    if (!allExamples) return [];
+    return allExamples
       .filter((e) => level === 'all' || e.level === level)
       .filter((e) => band === 'all' || e.performanceBand === band);
-  }, [state.examples, level, band]);
+  }, [allExamples, level, band]);
+
+  if (!allExamples) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>

@@ -1,18 +1,36 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { useMockState } from '../../mock/useMockStore';
+import type { CatalogTopic } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { VideoLink } from '../../components/VideoLink';
+import { GuidePanel } from '../../components/GuidePanel';
+import { fetchCatalogTopic } from '../../services/contentData';
+import { fetchVideoForWritingType, type ReferenceVideo } from '../../services/videoData';
+import { fetchGuideForWritingType, type WritingTypeGuide } from '../../services/guideData';
 
 export function CatalogTopicPage() {
   const { t } = useTranslation();
   const { topicId } = useParams();
-  const state = useMockState();
-  const topic = state.catalogTopics.find((t2) => t2.id === topicId);
+  const [topic, setTopic] = useState<CatalogTopic | null | undefined>(undefined);
+  const [video, setVideo] = useState<ReferenceVideo | null>(null);
+  const [guide, setGuide] = useState<WritingTypeGuide | null>(null);
 
-  if (!topic) return <Navigate to="/student/catalog" replace />;
+  useEffect(() => {
+    if (topicId) fetchCatalogTopic(topicId).then(setTopic);
+  }, [topicId]);
+
+  useEffect(() => {
+    if (topic) fetchVideoForWritingType(topic.writingTypeId).then(setVideo);
+    if (topic) fetchGuideForWritingType(topic.writingTypeId).then(setGuide);
+  }, [topic]);
+
+  if (topic === null) return <Navigate to="/student/catalog" replace />;
+  if (topic === undefined) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -30,6 +48,9 @@ export function CatalogTopicPage() {
         </div>
 
         <p style={{ lineHeight: 'var(--leading-relaxed)' }}>{topic.prompt}</p>
+
+        <GuidePanel guide={guide} />
+        <VideoLink video={video} />
 
         <div className="assignment-card__meta" style={{ fontSize: 'var(--text-sm)' }}>
           <span>{topic.minWords}–{topic.maxWords} {t('common.words')}</span>
@@ -70,23 +91,6 @@ export function CatalogTopicPage() {
         {topic.tags.length > 0 && (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {topic.tags.map((tag) => <span key={tag} className="badge badge--neutral">{tag}</span>)}
-          </div>
-        )}
-
-        {topic.relatedExampleIds.length > 0 && (
-          <div>
-            <p className="field__label" style={{ marginBottom: 'var(--space-2)' }}>{t('catalog.relatedExamples')}</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {topic.relatedExampleIds.map((id) => {
-                const example = state.examples.find((e) => e.id === id);
-                if (!example) return null;
-                return (
-                  <Link key={id} to={`/student/examples/${id}`} className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }}>
-                    {example.title}
-                  </Link>
-                );
-              })}
-            </div>
           </div>
         )}
       </div>

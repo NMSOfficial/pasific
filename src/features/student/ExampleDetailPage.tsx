@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useParams } from 'react-router-dom';
 import { CheckCircle2, TrendingUp } from 'lucide-react';
-import { useMockState } from '../../mock/useMockStore';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { WritingAnnotation } from '../../types/entities';
+import type { WritingAnnotation, WritingExample } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
@@ -14,17 +13,23 @@ import { AnnotatedText } from '../../components/AnnotatedText';
 import { ErrorDetailPanel } from '../../components/ErrorDetailPanel';
 import { FeedbackTabs } from '../../components/FeedbackTabs';
 import { MobileBottomSheet } from '../../components/MobileBottomSheet';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useIsMobile } from '../../utils/useIsMobile';
+import { fetchExample } from '../../services/exampleData';
 
 export function ExampleDetailPage() {
   const { t } = useTranslation();
   const { exampleId } = useParams();
-  const state = useMockState();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<WritingAnnotation | null>(null);
+  const [example, setExample] = useState<WritingExample | null | undefined>(undefined);
 
-  const example = state.examples.find((e) => e.id === exampleId);
-  if (!example) return <Navigate to="/student/examples" replace />;
+  useEffect(() => {
+    if (exampleId) fetchExample(exampleId).then(setExample);
+  }, [exampleId]);
+
+  if (example === null) return <Navigate to="/student/examples" replace />;
+  if (example === undefined) return <LoadingSkeleton height="12rem" />;
 
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;
 

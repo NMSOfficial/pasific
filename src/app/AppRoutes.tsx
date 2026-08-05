@@ -12,6 +12,7 @@ import {
 import { LoginPage } from '../features/auth/LoginPage';
 import { ActivatePage } from '../features/auth/ActivatePage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 
 import { StudentHomePage } from '../features/student/StudentHomePage';
 import { AssignmentListPage } from '../features/student/AssignmentListPage';
@@ -64,6 +65,7 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/activate" element={<ActivatePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route
         path="/student"

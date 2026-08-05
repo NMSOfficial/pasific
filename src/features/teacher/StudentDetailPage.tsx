@@ -1,11 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { computePortfolioMetrics, getClass, getSchool } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { TeacherProfile } from '../../types/entities';
+import { computePortfolioMetrics } from '../../utils/portfolio';
+import type { SchoolClass, StudentProfile, Submission, TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { FeedbackTabs } from '../../components/FeedbackTabs';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
@@ -13,31 +13,49 @@ import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { SubmissionStatusBadge } from '../../components/StatusBadge';
 import { EmptyState } from '../../components/EmptyState';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useHasPermission } from '../../components/PermissionGuard';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { formatDate } from '../../utils/format';
 import { exportPortfolioPdf } from '../../utils/pdf';
-import { useState } from 'react';
 import { KeyRound } from 'lucide-react';
+import { fetchStudent, resetStudentPassword, toSchoolClass, fetchClass } from '../../services/teacherData';
+import { fetchSchool, type SchoolSummary } from '../../services/adminData';
+import { fetchSubmissionsForStudents } from '../../services/submissionData';
 
 export function StudentDetailPage({ portfolioTab = false }: { portfolioTab?: boolean } = {}) {
   const { t, i18n } = useTranslation();
   const { studentId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
   const canResetPasswords = useHasPermission('reset_student_passwords');
   const [confirmReset, setConfirmReset] = useState(false);
 
-  const student = studentId ? state.students.find((s) => s.id === studentId) : undefined;
-  if (!student) return <Navigate to="/teacher/classes" replace />;
+  const [student, setStudent] = useState<StudentProfile | null | undefined>(undefined);
+  const [school, setSchool] = useState<SchoolSummary | null>(null);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
-  const school = getSchool(state, student.schoolId);
-  const classes = student.classIds.map((id) => getClass(state, id)).filter(Boolean);
-  const submissions = state.submissions
-    .filter((s) => s.studentId === student.id)
-    .sort((a, b) => (b.submittedAt ?? b.lastSavedAt ?? '').localeCompare(a.submittedAt ?? a.lastSavedAt ?? ''));
-  const portfolio = computePortfolioMetrics(state, student.id);
+  useEffect(() => {
+    if (!studentId) return;
+    fetchStudent(studentId).then(async (s) => {
+      setStudent(s);
+      if (!s) return;
+      const [schoolData, classData, subs] = await Promise.all([
+        fetchSchool(s.schoolId),
+        Promise.all(s.classIds.map((id) => fetchClass(id))),
+        fetchSubmissionsForStudents([s.id]),
+      ]);
+      setSchool(schoolData);
+      setClasses(classData.filter((c) => c !== null).map((c) => toSchoolClass(c!)));
+      setSubmissions(subs.sort((a, b) => (b.submittedAt ?? b.lastSavedAt ?? '').localeCompare(a.submittedAt ?? a.lastSavedAt ?? '')));
+    });
+  }, [studentId]);
+
+  if (student === null) return <Navigate to="/teacher/classes" replace />;
+  if (student === undefined) return <LoadingSkeleton height="12rem" />;
+
+  const portfolio = computePortfolioMetrics(student.id, submissions);
   const scoreTrendData = portfolio.scoreTrend.map((p, i) => ({ name: `#${i + 1}`, score: p.score }));
 
   const overviewTab = (
@@ -90,7 +108,7 @@ export function StudentDetailPage({ portfolioTab = false }: { portfolioTab?: boo
     <>
       <PageHeader
         title={student.displayName}
-        subtitle={`@${student.username} · ${school?.name} · ${classes.map((c) => c!.name).join(', ')}`}
+        subtitle={`@${student.username} · ${school?.name} · ${classes.map((c) => c.name).join(', ')}`}
         actions={
           <>
             <PdfExportButton
@@ -125,7 +143,7 @@ export function StudentDetailPage({ portfolioTab = false }: { portfolioTab?: boo
         open={confirmReset}
         title={t('teacher.classes.resetPasswordConfirmTitle')}
         description={t('teacher.classes.resetPasswordConfirmDescription')}
-        onConfirm={() => { mockStore.resetStudentPassword(student.id, teacher.id, teacher.displayName); setConfirmReset(false); }}
+        onConfirm={async () => { await resetStudentPassword(student.id, teacher.id, teacher.displayName); setConfirmReset(false); }}
         onCancel={() => setConfirmReset(false)}
       />
     </>

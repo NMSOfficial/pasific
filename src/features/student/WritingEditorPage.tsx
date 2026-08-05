@@ -1,52 +1,60 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Maximize2, Minimize2, WifiOff, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getAssignment, getSubmissionForAssignment } from '../../mock/selectors';
-import type { StudentProfile } from '../../types/entities';
+import type { Assignment, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingPromptPanel } from '../../components/WritingPromptPanel';
 import { WordCounter, countWords } from '../../components/WordCounter';
 import { AutosaveIndicator } from '../../components/AutosaveIndicator';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useAutosave } from '../../utils/useAutosave';
 import { formatDate, formatDateTime } from '../../utils/format';
+import { fetchAssignment } from '../../services/assignmentData';
+import { fetchSubmissionForAssignment, createDraftSubmission, saveSubmissionDraft, submitSubmission } from '../../services/submissionData';
 
 export function WritingEditorPage() {
   const { t, i18n } = useTranslation();
   const { assignmentId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
 
-  const assignment = assignmentId ? getAssignment(state, assignmentId) : undefined;
-
-  const submission = useMemo(() => {
-    if (!assignment) return undefined;
-    const existing = getSubmissionForAssignment(state, assignment.id, student.id);
-    if (existing) return existing;
-    return mockStore.createDraftSubmission({
-      id: `sub_${student.id}_${assignment.id}`,
-      assignmentId: assignment.id,
-      isPractice: false,
-      studentId: student.id,
-      schoolId: student.schoolId,
-      writingTypeId: assignment.writingTypeId,
-      level: assignment.level,
-      topicTitle: assignment.title,
-    });
-  }, [assignment, state, student]);
-
-  const [text, setText] = useState(submission?.text ?? '');
+  const [assignment, setAssignment] = useState<Assignment | null | undefined>(undefined);
+  const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
+  const [text, setText] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
   const [simulateOffline, setSimulateOffline] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
 
-  const { status, lastSavedAt } = useAutosave(text, (value) => mockStore.saveSubmissionDraft(submission!.id, value), { simulateOffline });
+  useEffect(() => {
+    if (!assignmentId) return;
+    fetchAssignment(assignmentId).then(async (a) => {
+      setAssignment(a);
+      if (!a) return;
+      let sub = await fetchSubmissionForAssignment(a.id, student.id);
+      if (!sub) {
+        sub = await createDraftSubmission({
+          assignmentId: a.id,
+          isPractice: false,
+          studentId: student.id,
+          schoolId: student.schoolId,
+          writingTypeId: a.writingTypeId,
+          level: a.level,
+          topicTitle: a.title,
+          scoreVisibleToStudent: a.showAiScoreImmediately,
+        });
+      }
+      setSubmission(sub);
+      setText(sub.text);
+    });
+  }, [assignmentId, student.id, student.schoolId]);
 
+  const { status, lastSavedAt } = useAutosave(text, (value) => { if (submission) void saveSubmissionDraft(submission.id, value); }, { simulateOffline });
+
+  if (assignment === undefined || submission === undefined) return <LoadingSkeleton height="12rem" />;
   if (!assignment || !submission) return <Navigate to="/student/assignments" replace />;
 
   const locked = !justSubmitted && submission.status !== 'not_started' && submission.status !== 'in_progress';
@@ -60,17 +68,17 @@ export function WritingEditorPage() {
         <CheckCircle2 size={40} color="var(--color-success)" aria-hidden="true" />
         <h1 style={{ fontSize: 'var(--text-xl)' }}>{t('editor.submittedTitle')}</h1>
         <p style={{ color: 'var(--color-text-muted)' }}>{t('editor.submittedDescription')}</p>
-        <p className="field__hint">{formatDateTime(submission.submittedAt, i18n.resolvedLanguage ?? 'tr')}</p>
+        <p className="field__hint">{formatDateTime(new Date().toISOString(), i18n.resolvedLanguage ?? 'tr')}</p>
         <Link to="/student/assignments" className="btn btn--primary">{t('editor.backToAssignments')}</Link>
       </div>
     );
   }
 
-  const handleSubmit = () => {
-    mockStore.saveSubmissionDraft(submission.id, text);
-    mockStore.submitSubmission(submission.id);
+  const handleSubmit = async () => {
+    await saveSubmissionDraft(submission.id, text);
     setConfirmOpen(false);
     setJustSubmitted(true);
+    void submitSubmission(submission.id);
   };
 
   return (

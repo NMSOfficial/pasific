@@ -1,60 +1,78 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { AppUser } from '../types/entities';
-import { mockStore } from '../mock/useMockStore';
+import { supabase } from '../services/supabaseClient';
+import { fetchAppUser, markLogin } from '../services/profile';
+import { usernameToAuthEmail } from '../utils/authEmail';
 
 interface AuthContextValue {
   user: AppUser | null;
-  login: (username: string, password: string) => { ok: true } | { ok: false; errorKey: string };
-  logout: () => void;
-  /** Development-only: swap the active user without a real login, for demoing role-based views. */
-  devSwitchUser: (userId: string) => void;
+  loading: boolean;
+  login: (username: string, password: string) => Promise<{ ok: true } | { ok: false; errorKey: string }>;
+  logout: () => Promise<void>;
+  /** Re-fetch the current session's profile — use after creating it server-side (e.g. activation). */
+  refreshUser: () => Promise<void>;
 }
-
-const STORAGE_KEY = 'pasific.session.userId';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(() => {
-    const storedId = localStorage.getItem(STORAGE_KEY);
-    if (!storedId) return null;
-    return resolveUserById(storedId);
-  });
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = useCallback((username: string, password: string) => {
+  useEffect(() => {
+    let active = true;
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+      if (active) {
+        setUser(appUser);
+        setLoading(false);
+      }
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+      if (active) setUser(appUser);
+    });
+
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = useCallback(async (username: string, password: string) => {
     if (!password) return { ok: false as const, errorKey: 'auth.login.invalidCredentials' };
-    const found = mockStore.findUserByUsername(username.trim());
-    if (!found) return { ok: false as const, errorKey: 'auth.login.invalidCredentials' };
-    setUser(found);
-    localStorage.setItem(STORAGE_KEY, found.id);
-    mockStore.markLogin(found.id);
+
+    const email = usernameToAuthEmail(username);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) return { ok: false as const, errorKey: 'auth.login.invalidCredentials' };
+
+    const appUser = await fetchAppUser(data.user.id);
+    if (!appUser) return { ok: false as const, errorKey: 'auth.login.invalidCredentials' };
+
+    setUser(appUser);
+    void markLogin(data.user.id);
     return { ok: true as const };
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  const devSwitchUser = useCallback((userId: string) => {
-    const found = resolveUserById(userId);
-    if (found) {
-      setUser(found);
-      localStorage.setItem(STORAGE_KEY, found.id);
-    }
+  const refreshUser = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+    setUser(appUser);
   }, []);
 
-  const value = useMemo(() => ({ user, login, logout, devSwitchUser }), [user, login, logout, devSwitchUser]);
+  const value = useMemo(
+    () => ({ user, loading, login, logout, refreshUser }),
+    [user, loading, login, logout, refreshUser],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-function resolveUserById(id: string): AppUser | null {
-  const s = mockStore.getState();
-  return s.students.find((u) => u.id === id)
-    ?? s.teachers.find((u) => u.id === id)
-    ?? (s.admins.find((u) => u.id === id) as AppUser | undefined)
-    ?? null;
 }
 
 export function useAuth() {

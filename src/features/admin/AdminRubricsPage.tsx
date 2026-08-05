@@ -1,32 +1,24 @@
-import { useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMockState } from '../../mock/useMockStore';
 import { standardCriteria } from '../../mock/rubric';
 import { PageHeader } from '../../components/PageHeader';
 import { PdfExportButton } from '../../components/PdfExportButton';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { exportScoringReviewSummaryPdf } from '../../utils/pdf';
+import { fetchOverrideStats, type OverrideStat } from '../../services/contentData';
 
 const RUBRIC_VERSION = 'v1.2';
-const AI_MODEL_VERSION = 'pasific-scorer-mock-0.1';
+// Mirrors GEMINI_MODEL in server/gemini.ts — update both together if the
+// grading model changes.
+const AI_MODEL_VERSION = 'gemma-4-31b-it';
 
 export function AdminRubricsPage() {
   const { t, i18n } = useTranslation();
-  const state = useMockState();
+  const [overrideStats, setOverrideStats] = useState<OverrideStat[] | null>(null);
 
-  const overrideStats = useMemo(() => {
-    const byCriterion = new Map<string, { count: number; totalDelta: number }>();
-    for (const sub of state.submissions) {
-      for (const o of sub.teacherOverrides) {
-        const crit = sub.criterionScores.find((c) => c.criterionId === o.criterionId);
-        const key = crit?.criterionKey ?? 'overall';
-        const entry = byCriterion.get(key) ?? { count: 0, totalDelta: 0 };
-        entry.count += 1;
-        entry.totalDelta += Math.abs(o.finalScore - o.originalAiScore);
-        byCriterion.set(key, entry);
-      }
-    }
-    return [...byCriterion.entries()].map(([key, v]) => ({ key, count: v.count, avgDelta: (v.totalDelta / v.count).toFixed(1) }));
-  }, [state.submissions]);
+  useEffect(() => { fetchOverrideStats().then(setOverrideStats); }, []);
+
+  if (!overrideStats) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>

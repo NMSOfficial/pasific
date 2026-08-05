@@ -1,18 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Maximize2, Minimize2, WifiOff, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getSubmission } from '../../mock/selectors';
-import type { StudentProfile } from '../../types/entities';
+import type { CatalogTopic, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { WritingPromptPanel } from '../../components/WritingPromptPanel';
 import { WordCounter, countWords } from '../../components/WordCounter';
 import { AutosaveIndicator } from '../../components/AutosaveIndicator';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useAutosave } from '../../utils/useAutosave';
 import { formatDateTime } from '../../utils/format';
+import { fetchCatalogTopic } from '../../services/contentData';
+import { fetchSubmission, saveSubmissionDraft, submitSubmission } from '../../services/submissionData';
 
 const GUIDED_QUESTIONS = [
   'Your opening does not clearly introduce both sides of the topic. What two effects will your essay discuss?',
@@ -26,22 +27,32 @@ export function PracticeWritingPage() {
   const { submissionId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
 
-  const submission = submissionId ? getSubmission(state, submissionId) : undefined;
   const navState = location.state as { topicId?: string; timerMinutes?: number } | null;
-  const topic = navState?.topicId ? state.catalogTopics.find((t2) => t2.id === navState.topicId) : undefined;
 
-  const [text, setText] = useState(submission?.text ?? '');
+  const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
+  const [topic, setTopic] = useState<CatalogTopic | undefined>(undefined);
+  const [text, setText] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
   const [simulateOffline, setSimulateOffline] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
 
-  const { status, lastSavedAt } = useAutosave(text, (value) => submission && mockStore.saveSubmissionDraft(submission.id, value), { simulateOffline });
+  useEffect(() => {
+    if (!submissionId) return;
+    fetchSubmission(submissionId).then((sub) => {
+      setSubmission(sub);
+      setText(sub?.text ?? '');
+    });
+    if (navState?.topicId) fetchCatalogTopic(navState.topicId).then((t2) => setTopic(t2 ?? undefined));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submissionId]);
 
+  const { status, lastSavedAt } = useAutosave(text, (value) => { if (submission) void saveSubmissionDraft(submission.id, value); }, { simulateOffline });
+
+  if (submission === undefined) return <LoadingSkeleton height="12rem" />;
   if (!submission || submission.studentId !== student.id) return <Navigate to="/student/practice" replace />;
 
   const locked = !justSubmitted && submission.status !== 'not_started' && submission.status !== 'in_progress';
@@ -55,17 +66,17 @@ export function PracticeWritingPage() {
         <CheckCircle2 size={40} color="var(--color-success)" aria-hidden="true" />
         <h1 style={{ fontSize: 'var(--text-xl)' }}>{t('editor.submittedTitle')}</h1>
         <p style={{ color: 'var(--color-text-muted)' }}>{t('editor.submittedDescription')}</p>
-        <p className="field__hint">{formatDateTime(submission.submittedAt, i18n.resolvedLanguage ?? 'tr')}</p>
+        <p className="field__hint">{formatDateTime(new Date().toISOString(), i18n.resolvedLanguage ?? 'tr')}</p>
         <Link to="/student/practice" className="btn btn--primary">{t('nav.student.practice')}</Link>
       </div>
     );
   }
 
-  const handleSubmit = () => {
-    mockStore.saveSubmissionDraft(submission.id, text);
-    mockStore.submitSubmission(submission.id);
+  const handleSubmit = async () => {
+    await saveSubmissionDraft(submission.id, text);
     setConfirmOpen(false);
     setJustSubmitted(true);
+    void submitSubmission(submission.id);
   };
 
   const askForHint = () => {

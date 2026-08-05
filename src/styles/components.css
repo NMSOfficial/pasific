@@ -184,6 +184,8 @@
 .badge--severity-inaccuracy { background: var(--severity-inaccuracy-soft); color: var(--severity-inaccuracy); }
 .badge--severity-info { background: var(--severity-info-soft); color: var(--severity-info); }
 
+.pasific-logo__icon-badge { display: inline-flex; flex-shrink: 0; border-radius: 26%; overflow: hidden; }
+.pasific-logo--on-dark .pasific-logo__icon-badge { background: var(--color-on-navy); padding: 15%; border-radius: 28%; }
 .pasific-logo--on-dark span { color: var(--color-on-navy) !important; }
 
 /* ---------- Header widgets ---------- */

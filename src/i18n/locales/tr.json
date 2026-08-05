@@ -6,6 +6,7 @@
   },
   "common": {
     "loading": "Yükleniyor…",
+    "role": "Rol",
     "save": "Kaydet",
     "cancel": "Vazgeç",
     "close": "Kapat",
@@ -167,8 +168,16 @@
       "sendCode": "Kurtarma kodu gönder",
       "noRecoveryTitle": "Kayıtlı kurtarma bilgisi yok",
       "noRecoveryDescription": "Bu hesapta kayıtlı bir kurtarma e-postası veya telefon numarası yok. Şifreni sıfırlaması için öğretmeninden yardım iste.",
-      "checkInbox": "Eşleşen bir hesap varsa kurtarma kodu gönderildi.",
+      "checkInbox": "Eşleşen bir hesap varsa, kayıtlı e-postaya bir kurtarma bağlantısı gönderildi.",
       "backToLogin": "Girişe dön"
+    },
+    "resetPassword": {
+      "title": "Yeni bir şifre belirle",
+      "subtitle": "Hesabın için yeni bir şifre seç.",
+      "invalidTitle": "Bu bağlantı geçersiz veya süresi dolmuş",
+      "invalidDescription": "Şifre sıfırlama bağlantıları bir süre sonra geçersiz olur. Devam etmek için yeni bir bağlantı iste.",
+      "requestNewLink": "Yeni bağlantı iste",
+      "success": "Şifren güncellendi. Artık yeni şifrenle giriş yapabilirsin."
     }
   },
   "roles": {
@@ -199,23 +208,23 @@
     "C2": "C2"
   },
   "writingType": {
-    "opinion_essay": "Görüş Denemesi (Opinion Essay)",
-    "argumentative_essay": "Tartışmacı Deneme (Argumentative Essay)",
-    "for_and_against_essay": "Lehte ve Aleyhte Deneme (For and Against Essay)",
-    "advantages_disadvantages_essay": "Avantaj–Dezavantaj Denemesi",
-    "problem_solution_essay": "Problem–Çözüm Denemesi",
-    "cause_effect_essay": "Neden–Sonuç Denemesi",
-    "compare_contrast_essay": "Karşılaştırma Denemesi",
-    "formal_email": "Resmi E-posta",
-    "informal_email": "Gündelik E-posta",
-    "complaint_letter": "Şikayet Mektubu",
-    "application_letter": "Başvuru Mektubu",
-    "article": "Makale",
-    "report": "Rapor",
-    "review": "Değerlendirme (Review)",
-    "narrative_story": "Anlatı Hikayesi",
-    "descriptive_writing": "Betimleyici Yazı",
-    "blog_post": "Blog Yazısı"
+    "opinion_essay": "Opinion Essay",
+    "argumentative_essay": "Argumentative Essay",
+    "for_and_against_essay": "For and Against Essay",
+    "advantages_disadvantages_essay": "Advantages and Disadvantages Essay",
+    "problem_solution_essay": "Problem–Solution Essay",
+    "cause_effect_essay": "Cause and Effect Essay",
+    "compare_contrast_essay": "Compare and Contrast Essay",
+    "formal_email": "Formal Email",
+    "informal_email": "Informal Email",
+    "complaint_letter": "Complaint Letter",
+    "application_letter": "Application Letter",
+    "article": "Article",
+    "report": "Report",
+    "review": "Review",
+    "narrative_story": "Narrative Story",
+    "descriptive_writing": "Descriptive Writing",
+    "blog_post": "Blog Post"
   },
   "rubric": {
     "criterion": {
@@ -473,7 +482,10 @@
       "openSchool": "Okulu aç",
       "classes": "Sınıflar",
       "teachers": "Öğretmenler",
-      "students": "Öğrenciler"
+      "students": "Öğrenciler",
+      "createClass": "Sınıf oluştur",
+      "className": "Sınıf adı",
+      "gradeLabel": "Seviye etiketi"
     },
     "users": {
       "createTeacher": "Öğretmen hesabı oluştur",
@@ -537,7 +549,17 @@
     "noRecoveryPhone": "Kayıtlı kurtarma telefon numarası yok",
     "preferences": "Tercihler",
     "language": "Dil",
-    "theme": "Tema"
+    "theme": "Tema",
+    "password": {
+      "title": "Şifre değiştir",
+      "new": "Yeni şifre",
+      "confirm": "Yeni şifre (tekrar)",
+      "submit": "Şifreyi güncelle",
+      "success": "Şifren güncellendi.",
+      "mismatch": "Şifreler eşleşmiyor.",
+      "tooShort": "Şifre en az 8 karakter olmalı.",
+      "error": "Şifre güncellenemedi. Lütfen tekrar dene."
+    }
   },
   "portfolio": {
     "history": "Yazı geçmişi",
@@ -548,6 +570,17 @@
     "practiceSource": "Bağımsız pratik",
     "customRubricNote": "Özel rubrik sonuçları ayrıca gösterilir ve gelişim grafiklerine dahil edilmez.",
     "filterSource": "Kaynak"
+  },
+  "video": {
+    "watchExplainer": "İzle: {{title}}"
+  },
+  "guide": {
+    "keyPhrases": "Faydalı ifadeler"
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "markAllRead": "Tümünü okundu işaretle",
+    "empty": "Henüz bildirimin yok."
   },
   "practice": {
     "newTitle": "Yeni Writing Çalışması",

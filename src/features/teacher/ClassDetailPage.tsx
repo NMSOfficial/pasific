@@ -1,46 +1,70 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getAssignmentsForClass, getSchool } from '../../mock/selectors';
 import { findErrorCategory } from '../../mock/errorCategories';
-import type { TeacherProfile } from '../../types/entities';
+import type { CriterionScore, StudentProfile, Submission, TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { StudentTable, type StudentRow } from '../../components/StudentTable';
 import { MobileStudentCardList } from '../../components/MobileStudentCard';
 import { CriterionScoreBar } from '../../components/CriterionScoreBar';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useHasPermission } from '../../components/PermissionGuard';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { exportClassProgressPdf } from '../../utils/pdf';
-import { Search } from 'lucide-react';
+import { fetchClass, fetchStudentsByIds, resetStudentPassword, type ClassMeta } from '../../services/teacherData';
+import { fetchSchool, type SchoolSummary } from '../../services/adminData';
+import { fetchAssignmentsForTeacher } from '../../services/assignmentData';
+import { fetchSubmissionsForStudents } from '../../services/submissionData';
 
 export function ClassDetailPage() {
   const { t, i18n } = useTranslation();
   const { classId } = useParams();
   const { user } = useAuth();
-  const state = useMockState();
   const teacher = user as TeacherProfile;
   const canResetPasswords = useHasPermission('reset_student_passwords');
 
   const [query, setQuery] = useState('');
   const [resetTarget, setResetTarget] = useState<string | null>(null);
+  const [cls, setCls] = useState<ClassMeta | null | undefined>(undefined);
+  const [school, setSchool] = useState<SchoolSummary | null>(null);
+  const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [assignmentCount, setAssignmentCount] = useState(0);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
 
-  const cls = classId ? state.classes.find((c) => c.id === classId) : undefined;
-  const school = cls ? getSchool(state, cls.schoolId) : undefined;
-  const assignments = cls ? getAssignmentsForClass(state, cls.id) : [];
-  const students = cls ? cls.studentIds.map((id) => state.students.find((s) => s.id === id)).filter(Boolean) : [];
-  const classSubmissions = cls ? state.submissions.filter((s) => cls.studentIds.includes(s.studentId) && !s.isPractice && s.status === 'result_ready') : [];
+  const reload = useCallback(() => {
+    if (!classId) return;
+    fetchClass(classId).then(async (c) => {
+      setCls(c);
+      if (!c) return;
+      const [schoolData, studentData, assignments] = await Promise.all([
+        fetchSchool(c.schoolId),
+        fetchStudentsByIds(c.studentIds),
+        fetchAssignmentsForTeacher(teacher.id),
+      ]);
+      setSchool(schoolData);
+      setStudents(studentData);
+      setAssignmentCount(assignments.filter((a) => a.classIds.includes(c.id)).length);
+      const subs = await fetchSubmissionsForStudents(c.studentIds, { excludePractice: true });
+      setSubmissions(subs.filter((s) => s.status === 'result_ready'));
+    });
+  }, [classId, teacher.id]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (cls === null) return <Navigate to="/teacher/classes" replace />;
+  if (cls === undefined) return <LoadingSkeleton height="12rem" />;
 
   const rows: StudentRow[] = students
-    .filter((s) => !query.trim() || s!.displayName.toLowerCase().includes(query.toLowerCase()) || s!.username.includes(query.toLowerCase()))
+    .filter((s) => !query.trim() || s.displayName.toLowerCase().includes(query.toLowerCase()) || s.username.toLowerCase().includes(query.toLowerCase()))
     .map((s) => {
-      const subs = classSubmissions.filter((sub) => sub.studentId === s!.id).sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
+      const subs = submissions.filter((sub) => sub.studentId === s.id).sort((a, b) => (b.submittedAt ?? '').localeCompare(a.submittedAt ?? ''));
       const latest = subs[0];
       const weakest = latest ? [...latest.criterionScores].sort((a, b) => (a.teacherScore ?? a.aiScore) - (b.teacherScore ?? b.aiScore))[0] : undefined;
       return {
-        student: s!,
+        student: s,
         lastSubmissionAt: latest?.submittedAt,
         recentScore: latest?.finalScore,
         focusAreaLabel: weakest ? t(`rubric.criterion.${weakest.criterionKey}.name`) : undefined,
@@ -48,7 +72,7 @@ export function ClassDetailPage() {
     });
 
   const criterionSums = new Map<string, { sum: number; count: number; maxScore: number; weight: number }>();
-  for (const sub of classSubmissions) {
+  for (const sub of submissions) {
     if (sub.usesCustomRubric) continue;
     for (const c of sub.criterionScores) {
       const entry = criterionSums.get(c.criterionKey) ?? { sum: 0, count: 0, maxScore: c.maxScore, weight: c.weight };
@@ -57,7 +81,7 @@ export function ClassDetailPage() {
       criterionSums.set(c.criterionKey, entry);
     }
   }
-  const criterionAverages = [...criterionSums.entries()].map(([key, v]) => ({
+  const criterionAverages: CriterionScore[] = [...criterionSums.entries()].map(([key, v]) => ({
     criterionId: key,
     criterionKey: key,
     aiScore: Math.round(v.sum / v.count),
@@ -69,23 +93,22 @@ export function ClassDetailPage() {
   }));
 
   const errorCounts = new Map<string, number>();
-  for (const sub of classSubmissions) {
+  for (const sub of submissions) {
     for (const a of sub.annotations) errorCounts.set(a.categoryId, (errorCounts.get(a.categoryId) ?? 0) + 1);
   }
   const topErrors = [...errorCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  const handleResetPassword = () => {
-    if (resetTarget) mockStore.resetStudentPassword(resetTarget, teacher.id, teacher.displayName);
+  const handleResetPassword = async () => {
+    if (resetTarget) await resetStudentPassword(resetTarget, teacher.id, teacher.displayName);
     setResetTarget(null);
+    reload();
   };
-
-  if (!cls) return <Navigate to="/teacher/classes" replace />;
 
   return (
     <>
       <PageHeader
         title={cls.name}
-        subtitle={`${school?.name} · ${cls.gradeLabel} · ${assignments.length} ${t('nav.teacher.assignments').toLowerCase()}`}
+        subtitle={`${school?.name} · ${cls.gradeLabel} · ${assignmentCount} ${t('nav.teacher.assignments').toLowerCase()}`}
         actions={
           <PdfExportButton
             label={t('teacher.reports.classReport')}

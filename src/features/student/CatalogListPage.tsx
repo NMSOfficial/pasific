@@ -1,33 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState } from '../../mock/useMockStore';
-import { getVisibleCatalogForSchool } from '../../mock/selectors';
 import { WRITING_TYPES } from '../../mock/writingTypes';
-import type { CefrLevel, StudentProfile } from '../../types/entities';
+import type { CatalogTopic, CefrLevel, StudentProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { CatalogCard } from '../../components/CatalogCard';
 import { EmptyState } from '../../components/EmptyState';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchVisibleCatalogForSchool } from '../../services/contentData';
 
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
 
 export function CatalogListPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const student = user as StudentProfile;
 
+  const [catalog, setCatalog] = useState<CatalogTopic[] | null>(null);
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<CefrLevel | 'all'>('all');
   const [writingType, setWritingType] = useState<string>('all');
 
+  useEffect(() => { fetchVisibleCatalogForSchool(student.schoolId).then(setCatalog); }, [student.schoolId]);
+
   const topics = useMemo(() => {
-    return getVisibleCatalogForSchool(state, student.schoolId)
+    if (!catalog) return [];
+    return catalog
       .filter((topic) => level === 'all' || topic.level === level)
       .filter((topic) => writingType === 'all' || topic.writingTypeId === writingType)
       .filter((topic) => !query.trim() || topic.title.toLowerCase().includes(query.trim().toLowerCase()) || topic.tags.some((tag) => tag.includes(query.trim().toLowerCase())));
-  }, [state, student.schoolId, level, writingType, query]);
+  }, [catalog, level, writingType, query]);
+
+  if (!catalog) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>

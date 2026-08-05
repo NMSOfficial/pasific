@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "vite",
     "server:dev": "tsx watch server/index.ts",
+    "server:start": "tsx server/index.ts",
+    "start": "tsx server/index.ts",
     "dev:all": "concurrently -n web,api -c blue,green \"npm:dev\" \"npm:server:dev\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
     "i18next": "^26.3.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "jspdf": "^4.2.1",
@@ -22,6 +26,8 @@
     "react-i18next": "^17.0.11",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
+    "resend": "^6.18.1",
+    "tsx": "^4.23.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -34,7 +40,6 @@
     "concurrently": "^10.0.4",
     "oxlint": "^1.75.0",
     "playwright": "^1.62.1",
-    "tsx": "^4.23.5",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"
   }

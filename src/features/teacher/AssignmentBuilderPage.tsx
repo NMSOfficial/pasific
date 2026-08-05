@@ -1,10 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getVisibleCatalogForSchool, getClass } from '../../mock/selectors';
 import { standardRubric } from '../../mock/rubric';
 import { WRITING_TYPES } from '../../mock/writingTypes';
 import type { AiSupportMode, AssignmentRubric, CatalogTopic, CefrLevel, TeacherProfile, WritingTypeId } from '../../types/entities';
@@ -13,6 +11,10 @@ import { CatalogCard } from '../../components/CatalogCard';
 import { RubricEditor } from '../../components/RubricEditor';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchVisibleCatalogForSchool, createSchoolCatalogTopic } from '../../services/contentData';
+import { fetchTeacherClasses, type ClassMeta } from '../../services/teacherData';
+import { createAssignment } from '../../services/assignmentData';
 
 const STEPS = ['stepTopic', 'stepDetails', 'stepAiSupport', 'stepScoring', 'stepReview'] as const;
 const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
@@ -21,7 +23,6 @@ const AI_MODES: AiSupportMode[] = ['none', 'critical_alerts_only', 'guided_pract
 export function AssignmentBuilderPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const navigate = useNavigate();
   const teacher = user as TeacherProfile;
 
@@ -46,9 +47,15 @@ export function AssignmentBuilderPage() {
   const [aiSupportMode, setAiSupportMode] = useState<AiSupportMode>('none');
   const [rubric, setRubric] = useState<AssignmentRubric>(standardRubric(`rubric_${Date.now()}`));
   const [showAiScoreImmediately, setShowAiScoreImmediately] = useState(true);
+  const [publishing, setPublishing] = useState(false);
 
-  const availableTopics = getVisibleCatalogForSchool(state, teacher.schoolIds[0]);
-  const teacherClasses = teacher.classIds.map((id) => getClass(state, id)).filter(Boolean);
+  const [availableTopics, setAvailableTopics] = useState<CatalogTopic[] | null>(null);
+  const [teacherClasses, setTeacherClasses] = useState<ClassMeta[]>([]);
+
+  useEffect(() => {
+    if (teacher.schoolIds[0]) fetchVisibleCatalogForSchool(teacher.schoolIds[0]).then(setAvailableTopics);
+    fetchTeacherClasses(teacher.id).then(setTeacherClasses);
+  }, [teacher.id, teacher.schoolIds]);
 
   const applyTopic = (topic: CatalogTopic) => {
     setTitle(topic.title);
@@ -65,28 +72,17 @@ export function AssignmentBuilderPage() {
     applyTopic(topic);
   };
 
-  const handleCreateTopicAndContinue = () => {
-    const created: CatalogTopic = {
-      id: `topic_${Date.now()}`,
+  const handleCreateTopicAndContinue = async () => {
+    const created = await createSchoolCatalogTopic({
       title: newTopic.title,
       prompt: newTopic.prompt,
       writingTypeId: newTopic.writingTypeId,
       level: newTopic.level,
       minWords: newTopic.minWords,
       maxWords: newTopic.maxWords,
-      estimatedMinutes: 40,
-      tags: [],
-      difficulty: 'standard',
-      learningObjectives: [],
-      genreExpectations: [],
-      relatedExampleIds: [],
-      sourceType: 'school_library',
-      visibility: 'school',
       schoolId: teacher.schoolIds[0],
       createdBy: teacher.id,
-      updatedAt: new Date().toISOString(),
-    };
-    mockStore.upsertSchoolCatalogTopic(created);
+    });
     applyTopic(created);
     setStep(1);
   };
@@ -104,17 +100,15 @@ export function AssignmentBuilderPage() {
     return true;
   };
 
-  const handlePublish = (status: 'draft' | 'published') => {
-    mockStore.createAssignment({
-      id: `assignment_${Date.now()}`,
+  const handlePublish = async (status: 'draft' | 'published') => {
+    setPublishing(true);
+    await createAssignment({
       title,
       prompt,
       writingTypeId,
       level,
       minWords,
       maxWords,
-      suggestedMinWords: minWords,
-      suggestedMaxWords: maxWords,
       dueAt,
       timeLimitMinutes,
       classIds,
@@ -126,11 +120,12 @@ export function AssignmentBuilderPage() {
       status,
       createdBy: teacher.id,
       schoolId: teacher.schoolIds[0],
-      createdAt: new Date().toISOString(),
       topicId,
     });
     navigate('/teacher/assignments');
   };
+
+  if (!availableTopics) return <LoadingSkeleton height="12rem" />;
 
   return (
     <>
@@ -225,9 +220,9 @@ export function AssignmentBuilderPage() {
           <fieldset className="field" style={{ border: 'none', padding: 0, margin: 0 }}>
             <legend className="field__label" style={{ padding: 0, marginBottom: 'var(--space-2)' }}>{t('teacher.assignments.classes')}</legend>
             {teacherClasses.map((c) => (
-              <label key={c!.id} className="checkbox-row">
-                <input type="checkbox" checked={classIds.includes(c!.id)} onChange={() => toggleClass(c!.id)} />
-                <span>{c!.name}</span>
+              <label key={c.id} className="checkbox-row">
+                <input type="checkbox" checked={classIds.includes(c.id)} onChange={() => toggleClass(c.id)} />
+                <span>{c.name}</span>
               </label>
             ))}
           </fieldset>
@@ -274,12 +269,12 @@ export function AssignmentBuilderPage() {
           </div>
           <p style={{ fontWeight: 'var(--weight-semibold)' }}>{title}</p>
           <p style={{ color: 'var(--color-text-muted)' }}>{prompt}</p>
-          <p className="field__hint">{minWords}–{maxWords} {t('common.words')} · {classIds.map((id) => getClass(state, id)?.name).join(', ')}</p>
+          <p className="field__hint">{minWords}–{maxWords} {t('common.words')} · {classIds.map((id) => teacherClasses.find((c) => c.id === id)?.name).join(', ')}</p>
           <p className="field__hint">{t('aiSupportMode.' + aiSupportMode)}</p>
           {rubric.isCustom && <p className="field__hint">{t('rubric.customRubricWarning')}</p>}
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-            <button type="button" className="btn btn--secondary" onClick={() => handlePublish('draft')}>{t('teacher.assignments.saveDraft')}</button>
-            <button type="button" className="btn btn--primary" onClick={() => handlePublish('published')}>{t('teacher.assignments.publish')}</button>
+            <button type="button" className="btn btn--secondary" disabled={publishing} onClick={() => handlePublish('draft')}>{t('teacher.assignments.saveDraft')}</button>
+            <button type="button" className="btn btn--primary" disabled={publishing} onClick={() => handlePublish('published')}>{t('teacher.assignments.publish')}</button>
           </div>
         </div>
       )}

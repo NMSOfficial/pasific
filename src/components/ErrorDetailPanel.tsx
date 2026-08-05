@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookmarkPlus, BookmarkCheck } from 'lucide-react';
 import type { WritingAnnotation } from '../types/entities';
 import { SEVERITY_META } from './severityMeta';
 import { findErrorCategory } from '../mock/errorCategories';
+import { fetchVideoForErrorCategory, type ReferenceVideo } from '../services/videoData';
+import { VideoLink } from './VideoLink';
 
 export function ErrorDetailPanel({ annotation }: { annotation: WritingAnnotation }) {
   const { t } = useTranslation();
   const [added, setAdded] = useState(false);
+  const [video, setVideo] = useState<ReferenceVideo | null>(null);
   const meta = SEVERITY_META[annotation.severity];
   const Icon = meta.icon;
   const category = findErrorCategory(annotation.categoryId);
+
+  useEffect(() => {
+    if (category) fetchVideoForErrorCategory(category.id, category.group).then(setVideo);
+  }, [category]);
 
   return (
     <div className="error-detail-panel">
@@ -40,6 +47,8 @@ export function ErrorDetailPanel({ annotation }: { annotation: WritingAnnotation
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>{annotation.suggestedCorrection}</p>
         </div>
       )}
+
+      <VideoLink video={video} />
 
       <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => setAdded((v) => !v)}>
         {added ? <BookmarkCheck size={14} aria-hidden="true" /> : <BookmarkPlus size={14} aria-hidden="true" />}

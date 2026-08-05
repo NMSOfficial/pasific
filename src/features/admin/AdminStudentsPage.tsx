@@ -1,19 +1,32 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import { useMockState, mockStore } from '../../mock/useMockStore';
-import { getSchool } from '../../mock/selectors';
 import type { AdminProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { fetchStudents, setAccountStatus, type StudentRow } from '../../services/adminData';
 
 export function AdminStudentsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const state = useMockState();
   const admin = user as AdminProfile;
+  const [students, setStudents] = useState<StudentRow[] | null>(null);
   const [query, setQuery] = useState('');
 
-  const rows = state.students.filter((s) => !query.trim() || s.displayName.toLowerCase().includes(query.toLowerCase()) || s.username.includes(query.toLowerCase()));
+  const reload = useCallback(() => {
+    fetchStudents().then(setStudents);
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  if (!students) return <LoadingSkeleton height="12rem" />;
+
+  const rows = students.filter((s) => !query.trim() || s.displayName.toLowerCase().includes(query.toLowerCase()) || s.username.toLowerCase().includes(query.toLowerCase()));
+
+  const toggleStatus = async (s: StudentRow) => {
+    await setAccountStatus(s.id, s.status === 'active' ? 'suspended' : 'active', { id: admin.id, displayName: admin.displayName });
+    reload();
+  };
 
   return (
     <>
@@ -31,25 +44,18 @@ export function AdminStudentsPage() {
         <table className="data-table">
           <thead><tr><th>{t('common.student')}</th><th>{t('settings.school')}</th><th>{t('common.status')}</th><th><span className="visually-hidden">{t('common.actions')}</span></th></tr></thead>
           <tbody>
-            {rows.map((s) => {
-              const school = getSchool(state, s.schoolId);
-              return (
-                <tr key={s.id}>
-                  <td>{s.displayName}<div className="field__hint">@{s.username}</div></td>
-                  <td>{school?.name}</td>
-                  <td><span className={`badge badge--${s.status === 'active' ? 'success' : 'warning'}`}>{t(`accountStatus.${s.status}`)}</span></td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn--ghost btn--sm"
-                      onClick={() => mockStore.setAccountStatus(s.id, s.status === 'active' ? 'suspended' : 'active', admin.id, admin.displayName)}
-                    >
-                      {s.status === 'active' ? t('admin.users.suspendAccount') : t('admin.users.reactivateAccount')}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {rows.map((s) => (
+              <tr key={s.id}>
+                <td>{s.displayName}<div className="field__hint">@{s.username}</div></td>
+                <td>{s.schoolName}</td>
+                <td><span className={`badge badge--${s.status === 'active' ? 'success' : 'warning'}`}>{t(`accountStatus.${s.status}`)}</span></td>
+                <td>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => toggleStatus(s)}>
+                    {s.status === 'active' ? t('admin.users.suspendAccount') : t('admin.users.reactivateAccount')}
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
