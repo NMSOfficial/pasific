@@ -1,9 +1,7 @@
 import { supabase } from './supabaseClient';
 import type { CriterionScore, StudyRecommendation, Submission, TeacherOverride, WritingAnnotation } from '../types/entities';
 import { recomputeFinalScore } from '../utils/portfolio';
-import { gradeWithAi } from './aiGrading';
-import { standardCriteria } from '../mock/rubric';
-import { fetchAssignment } from './assignmentData';
+import { API_BASE } from './apiBase';
 
 function mapCriterionScore(row: Record<string, unknown>): CriterionScore {
   return {
@@ -109,7 +107,7 @@ function groupBy<T extends Record<string, unknown>>(rows: T[], key: string): Map
 }
 
 async function assembleSubmissions(rows: Record<string, unknown>[]): Promise<Submission[]> {
-  const ids = rows.map((r) => r.id as string);
+  const ids = rows.map((row) => row.id as string);
   if (!ids.length) return [];
 
   const [{ data: scores }, { data: annotations }, { data: recs }, { data: overrides }] = await Promise.all([
@@ -120,22 +118,25 @@ async function assembleSubmissions(rows: Record<string, unknown>[]): Promise<Sub
   ]);
 
   const scoresBySub = groupBy(scores ?? [], 'submission_id');
-  const annBySub = groupBy(annotations ?? [], 'submission_id');
-  const recBySub = groupBy(recs ?? [], 'submission_id');
-  const ovBySub = groupBy(overrides ?? [], 'submission_id');
+  const annotationsBySub = groupBy(annotations ?? [], 'submission_id');
+  const recommendationsBySub = groupBy(recs ?? [], 'submission_id');
+  const overridesBySub = groupBy(overrides ?? [], 'submission_id');
 
-  return rows.map((r) =>
+  return rows.map((row) =>
     mapSubmission(
-      r,
-      (scoresBySub.get(r.id as string) ?? []).map(mapCriterionScore),
-      (annBySub.get(r.id as string) ?? []).map(mapAnnotation),
-      (recBySub.get(r.id as string) ?? []).map(mapRecommendation),
-      (ovBySub.get(r.id as string) ?? []).map(mapOverride),
+      row,
+      (scoresBySub.get(row.id as string) ?? []).map(mapCriterionScore),
+      (annotationsBySub.get(row.id as string) ?? []).map(mapAnnotation),
+      (recommendationsBySub.get(row.id as string) ?? []).map(mapRecommendation),
+      (overridesBySub.get(row.id as string) ?? []).map(mapOverride),
     ),
   );
 }
 
-export async function fetchSubmissionsForStudents(studentIds: string[], opts?: { practiceOnly?: boolean; excludePractice?: boolean }): Promise<Submission[]> {
+export async function fetchSubmissionsForStudents(
+  studentIds: string[],
+  opts?: { practiceOnly?: boolean; excludePractice?: boolean },
+): Promise<Submission[]> {
   if (!studentIds.length) return [];
   let query = supabase.from('submissions').select('*').in('student_id', studentIds);
   if (opts?.practiceOnly) query = query.eq('is_practice', true);
@@ -178,19 +179,28 @@ export async function applyTeacherOverride(params: {
   const submission = await fetchSubmission(params.submissionId);
   if (!submission) throw new Error('submission_not_found');
 
-  const criterion = submission.criterionScores.find((c) => c.criterionId === params.criterionId);
+  const criterion = submission.criterionScores.find((candidate) => candidate.criterionId === params.criterionId);
   const originalScore = criterion?.aiScore ?? submission.aiScore ?? 0;
 
   if (criterion) {
-    const { error } = await supabase.from('criterion_scores').update({ teacher_score: params.newScore }).eq('submission_id', params.submissionId).eq('criterion_id', params.criterionId);
+    const { error } = await supabase
+      .from('criterion_scores')
+      .update({ teacher_score: params.newScore })
+      .eq('submission_id', params.submissionId)
+      .eq('criterion_id', params.criterionId);
     if (error) throw error;
   }
 
-  const updatedScores = submission.criterionScores.map((c) => (c.criterionId === params.criterionId ? { ...c, teacherScore: params.newScore } : c));
+  const updatedScores = submission.criterionScores.map((score) =>
+    score.criterionId === params.criterionId ? { ...score, teacherScore: params.newScore } : score,
+  );
   const newFinalScore = recomputeFinalScore(updatedScores);
 
-  const { error: subError } = await supabase.from('submissions').update({ final_score: newFinalScore }).eq('id', params.submissionId);
-  if (subError) throw subError;
+  const { error: submissionError } = await supabase
+    .from('submissions')
+    .update({ final_score: newFinalScore })
+    .eq('id', params.submissionId);
+  if (submissionError) throw submissionError;
 
   const { error: overrideError } = await supabase.from('teacher_overrides').insert({
     submission_id: params.submissionId,
@@ -206,13 +216,17 @@ export async function applyTeacherOverride(params: {
     type: 'score_override',
     actor_id: params.teacherId,
     actor_name: params.teacherName,
-    target_label: `${submission.topicTitle}`,
+    target_label: submission.topicTitle,
     detail: params.reason,
   });
 }
 
 export async function publishTeacherReview(submissionId: string, feedback: string, teacherId: string): Promise<void> {
-  const { data: current } = await supabase.from('submissions').select('final_score, ai_score').eq('id', submissionId).maybeSingle();
+  const { data: current } = await supabase
+    .from('submissions')
+    .select('final_score, ai_score')
+    .eq('id', submissionId)
+    .maybeSingle();
   const { error } = await supabase
     .from('submissions')
     .update({
@@ -227,9 +241,26 @@ export async function publishTeacherReview(submissionId: string, feedback: strin
   if (error) throw error;
 }
 
+async function runGrading(submissionId: string): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('grading_unauthorized');
+
+  const response = await fetch(`${API_BASE}/api/submissions/${encodeURIComponent(submissionId)}/grade`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? `grading_failed_${response.status}`);
+  }
+}
+
 export async function retryAiGrading(submissionId: string): Promise<void> {
-  const { error } = await supabase.from('submissions').update({ status: 'analyzing' }).eq('id', submissionId).eq('status', 'grading_failed');
-  if (error) throw error;
   await runGrading(submissionId);
 }
 
@@ -280,76 +311,16 @@ export async function createDraftSubmission(input: {
   return full;
 }
 
-async function runGrading(submissionId: string): Promise<void> {
-  const sub = await fetchSubmission(submissionId);
-  if (!sub) return;
-
-  const assignment = sub.assignmentId ? await fetchAssignment(sub.assignmentId) : null;
-  const criteria = (assignment?.rubric.criteria ?? standardCriteria()).filter((c) => c.enabled);
-
-  try {
-    const result = await gradeWithAi({
-      text: sub.text,
-      writingTypeId: sub.writingTypeId,
-      level: sub.level,
-      assignmentPrompt: assignment?.prompt,
-      minWords: assignment?.minWords,
-      maxWords: assignment?.maxWords,
-      criteria,
-    });
-
-    await supabase.from('criterion_scores').insert(
-      result.criterionScores.map((c) => ({
-        submission_id: submissionId,
-        criterion_id: c.criterionId,
-        criterion_key: c.criterionKey,
-        ai_score: c.aiScore,
-        max_score: c.maxScore,
-        weight: c.weight,
-        explanation: c.explanation,
-        evidence_quote: c.evidenceQuote,
-        strong_aspects: c.strongAspects,
-        development_areas: c.developmentAreas,
-      })),
-    );
-
-    if (result.annotations.length) {
-      await supabase.from('writing_annotations').insert(
-        result.annotations.map((a) => ({
-          submission_id: submissionId,
-          start_pos: a.start,
-          end_pos: a.end,
-          quoted_text: a.quotedText,
-          severity: a.severity,
-          category_id: a.categoryId,
-          explanation: a.explanation,
-          hint: a.hint,
-          suggested_correction: a.suggestedCorrection,
-        })),
-      );
-    }
-
-    const overall = recomputeFinalScore(result.criterionScores);
-    await supabase
-      .from('submissions')
-      .update({
-        ai_score: overall,
-        final_score: sub.scoreVisibleToStudent ? overall : null,
-        status: sub.assignmentId ? 'teacher_review_pending' : 'result_ready',
-      })
-      .eq('id', submissionId);
-  } catch (err) {
-    console.error('[grading] request failed:', err);
-    await supabase.from('submissions').update({ status: 'grading_failed' }).eq('id', submissionId);
-  }
-}
-
 export async function submitSubmission(submissionId: string): Promise<void> {
   const { data: current } = await supabase.from('submissions').select('status').eq('id', submissionId).maybeSingle();
   if (!current || (current.status !== 'not_started' && current.status !== 'in_progress')) return;
 
   const now = new Date().toISOString();
-  await supabase.from('submissions').update({ status: 'submitted', submitted_at: now, last_saved_at: now }).eq('id', submissionId);
-  await supabase.from('submissions').update({ status: 'analyzing' }).eq('id', submissionId);
+  const { error } = await supabase
+    .from('submissions')
+    .update({ status: 'submitted', submitted_at: now, last_saved_at: now })
+    .eq('id', submissionId);
+  if (error) throw error;
+
   await runGrading(submissionId);
 }
