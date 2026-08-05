@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, useParams } from 'react-router-dom';
-import { PlusCircle } from 'lucide-react';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { AdminProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -10,19 +10,24 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { formatDate } from '../../utils/format';
 import {
   fetchSchool, fetchClassesForSchool, fetchTeachersForSchool, fetchStudentsForSchool, setSchoolStatus, createClass,
+  deleteSchool, deleteClass,
   type SchoolSummary, type ClassRow, type TeacherRow, type StudentRow,
 } from '../../services/adminData';
 
 export function AdminSchoolDetailPage() {
   const { t, i18n } = useTranslation();
   const { schoolId } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const admin = user as AdminProfile;
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [confirmDeleteSchool, setConfirmDeleteSchool] = useState(false);
+  const [confirmDeleteClass, setConfirmDeleteClass] = useState<ClassRow | null>(null);
   const [creatingClass, setCreatingClass] = useState(false);
   const [className, setClassName] = useState('');
   const [gradeLabel, setGradeLabel] = useState('');
   const [savingClass, setSavingClass] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [school, setSchool] = useState<SchoolSummary | null | undefined>(undefined);
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -48,6 +53,23 @@ export function AdminSchoolDetailPage() {
     reload();
   };
 
+  const handleDeleteSchool = async () => {
+    setDeleting(true);
+    await deleteSchool(school.id);
+    setDeleting(false);
+    setConfirmDeleteSchool(false);
+    navigate('/admin/schools');
+  };
+
+  const handleDeleteClass = async () => {
+    if (!confirmDeleteClass) return;
+    setDeleting(true);
+    await deleteClass(confirmDeleteClass.id);
+    setDeleting(false);
+    setConfirmDeleteClass(null);
+    reload();
+  };
+
   const handleCreateClass = async () => {
     if (!className.trim()) return;
     setSavingClass(true);
@@ -65,9 +87,14 @@ export function AdminSchoolDetailPage() {
         title={school.name}
         subtitle={`${school.city} · ${t(`accountStatus.${school.status === 'active' ? 'active' : 'suspended'}`)}`}
         actions={
-          <button type="button" className={`btn ${school.status === 'active' ? 'btn--danger' : 'btn--primary'}`} onClick={() => (school.status === 'active' ? setConfirmSuspend(true) : toggleStatus())}>
-            {school.status === 'active' ? t('admin.schools.suspend') : t('admin.schools.reactivate')}
-          </button>
+          <>
+            <button type="button" className={`btn ${school.status === 'active' ? 'btn--danger' : 'btn--primary'}`} onClick={() => (school.status === 'active' ? setConfirmSuspend(true) : toggleStatus())}>
+              {school.status === 'active' ? t('admin.schools.suspend') : t('admin.schools.reactivate')}
+            </button>
+            <button type="button" className="btn btn--danger" onClick={() => setConfirmDeleteSchool(true)}>
+              <Trash2 size={16} aria-hidden="true" /> {t('admin.schools.deleteSchool')}
+            </button>
+          </>
         }
       />
 
@@ -102,9 +129,12 @@ export function AdminSchoolDetailPage() {
 
         <div className="card-grid">
           {classes.map((c) => (
-            <div key={c.id} className="card card--padded">
+            <div key={c.id} className="card card--padded" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
               <p style={{ fontWeight: 'var(--weight-medium)' }}>{c.name}</p>
               <p className="field__hint">{c.gradeLabel} · {c.studentCount} {t('common.student').toLowerCase()}</p>
+              <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start', color: 'var(--color-error)' }} onClick={() => setConfirmDeleteClass(c)}>
+                <Trash2 size={14} aria-hidden="true" /> {t('admin.schools.deleteClass')}
+              </button>
             </div>
           ))}
         </div>
@@ -129,6 +159,24 @@ export function AdminSchoolDetailPage() {
         destructive
         onConfirm={toggleStatus}
         onCancel={() => setConfirmSuspend(false)}
+      />
+      <ConfirmationDialog
+        open={confirmDeleteSchool}
+        title={t('admin.schools.deleteSchoolConfirmTitle')}
+        description={t('admin.schools.deleteSchoolConfirmDescription')}
+        destructive
+        busy={deleting}
+        onConfirm={handleDeleteSchool}
+        onCancel={() => setConfirmDeleteSchool(false)}
+      />
+      <ConfirmationDialog
+        open={!!confirmDeleteClass}
+        title={t('admin.schools.deleteClassConfirmTitle')}
+        description={t('admin.schools.deleteClassConfirmDescription')}
+        destructive
+        busy={deleting}
+        onConfirm={handleDeleteClass}
+        onCancel={() => setConfirmDeleteClass(null)}
       />
     </>
   );

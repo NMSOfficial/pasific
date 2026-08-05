@@ -487,7 +487,13 @@
       "students": "Students",
       "createClass": "Create class",
       "className": "Class name",
-      "gradeLabel": "Grade label"
+      "gradeLabel": "Grade label",
+      "deleteSchool": "Delete school",
+      "deleteSchoolConfirmTitle": "Permanently delete this school?",
+      "deleteSchoolConfirmDescription": "This deletes all of its classes, activation codes, catalog topics, assignments and submissions. Teacher and student accounts are not deleted, but will lose their link to this school. This cannot be undone.",
+      "deleteClass": "Delete class",
+      "deleteClassConfirmTitle": "Delete this class?",
+      "deleteClassConfirmDescription": "Enrolled students will be unlinked from it. This cannot be undone."
     },
     "users": {
       "createTeacher": "Create teacher account",
@@ -495,7 +501,10 @@
       "assignClasses": "Assign classes",
       "permissions": "Permissions",
       "suspendAccount": "Suspend account",
-      "reactivateAccount": "Reactivate account"
+      "reactivateAccount": "Reactivate account",
+      "deleteAccount": "Delete account",
+      "deleteAccountConfirmTitle": "Permanently delete this account?",
+      "deleteAccountConfirmDescription": "This deletes the login and all of their data. This cannot be undone."
     },
     "codes": {
       "createBatch": "Create activation code batch",

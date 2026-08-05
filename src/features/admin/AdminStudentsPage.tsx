@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Trash2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { AdminProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { fetchStudents, setAccountStatus, type StudentRow } from '../../services/adminData';
+import { deleteUserAccount } from '../../services/adminActionsClient';
 
 export function AdminStudentsPage() {
   const { t } = useTranslation();
@@ -12,6 +15,8 @@ export function AdminStudentsPage() {
   const admin = user as AdminProfile;
   const [students, setStudents] = useState<StudentRow[] | null>(null);
   const [query, setQuery] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<StudentRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const reload = useCallback(() => {
     fetchStudents().then(setStudents);
@@ -25,6 +30,15 @@ export function AdminStudentsPage() {
 
   const toggleStatus = async (s: StudentRow) => {
     await setAccountStatus(s.id, s.status === 'active' ? 'suspended' : 'active', { id: admin.id, displayName: admin.displayName });
+    reload();
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    await deleteUserAccount(confirmDelete.id);
+    setDeleting(false);
+    setConfirmDelete(null);
     reload();
   };
 
@@ -49,9 +63,12 @@ export function AdminStudentsPage() {
                 <td>{s.displayName}<div className="field__hint">@{s.username}</div></td>
                 <td>{s.schoolName}</td>
                 <td><span className={`badge badge--${s.status === 'active' ? 'success' : 'warning'}`}>{t(`accountStatus.${s.status}`)}</span></td>
-                <td>
+                <td style={{ display: 'flex', gap: 'var(--space-2)' }}>
                   <button type="button" className="btn btn--ghost btn--sm" onClick={() => toggleStatus(s)}>
                     {s.status === 'active' ? t('admin.users.suspendAccount') : t('admin.users.reactivateAccount')}
+                  </button>
+                  <button type="button" className="btn btn--ghost btn--sm" style={{ color: 'var(--color-error)' }} onClick={() => setConfirmDelete(s)}>
+                    <Trash2 size={14} aria-hidden="true" /> {t('admin.users.deleteAccount')}
                   </button>
                 </td>
               </tr>
@@ -59,6 +76,16 @@ export function AdminStudentsPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmationDialog
+        open={!!confirmDelete}
+        title={t('admin.users.deleteAccountConfirmTitle')}
+        description={t('admin.users.deleteAccountConfirmDescription')}
+        destructive
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </>
   );
 }

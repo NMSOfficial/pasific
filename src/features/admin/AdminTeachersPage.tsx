@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { AdminProfile, TeacherPermissionKey } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { fetchTeachers, updateTeacherPermissions, setAccountStatus, createActivationCodeBatch, fetchSchools, type TeacherRow, type SchoolSummary } from '../../services/adminData';
+import { deleteUserAccount } from '../../services/adminActionsClient';
 
 const ALL_PERMISSIONS: TeacherPermissionKey[] = [
   'manage_school_settings', 'manage_teachers', 'manage_classes', 'manage_students',
@@ -27,6 +29,8 @@ export function AdminTeachersPage() {
   const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftPermissions, setDraftPermissions] = useState<TeacherPermissionKey[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<TeacherRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const reload = useCallback(() => {
     fetchTeachers().then(setTeachers);
@@ -75,6 +79,15 @@ export function AdminTeachersPage() {
 
   const toggleStatus = async (tch: TeacherRow) => {
     await setAccountStatus(tch.id, tch.status === 'active' ? 'suspended' : 'active', { id: admin.id, displayName: admin.displayName });
+    reload();
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    await deleteUserAccount(confirmDelete.id);
+    setDeleting(false);
+    setConfirmDelete(null);
     reload();
   };
 
@@ -135,13 +148,28 @@ export function AdminTeachersPage() {
                 <button type="button" className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => startEdit(tch.id)}>{t('admin.users.permissions')}</button>
               )}
 
-              <button type="button" className="btn btn--ghost btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => toggleStatus(tch)}>
-                {tch.status === 'active' ? t('admin.users.suspendAccount') : t('admin.users.reactivateAccount')}
-              </button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={() => toggleStatus(tch)}>
+                  {tch.status === 'active' ? t('admin.users.suspendAccount') : t('admin.users.reactivateAccount')}
+                </button>
+                <button type="button" className="btn btn--ghost btn--sm" style={{ color: 'var(--color-error)' }} onClick={() => setConfirmDelete(tch)}>
+                  <Trash2 size={14} aria-hidden="true" /> {t('admin.users.deleteAccount')}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <ConfirmationDialog
+        open={!!confirmDelete}
+        title={t('admin.users.deleteAccountConfirmTitle')}
+        description={t('admin.users.deleteAccountConfirmDescription')}
+        destructive
+        busy={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </>
   );
 }

@@ -101,10 +101,28 @@ export async function setSchoolStatus(schoolId: string, status: 'active' | 'susp
   await logAudit(status === 'suspended' ? 'account_suspended' : 'account_reactivated', actor, schoolId, `School ${status}`);
 }
 
+/**
+ * Hard delete. FK constraints cascade to school_classes, activation_codes,
+ * teacher_schools/teacher_classes, catalog_topics, assignments and
+ * submissions scoped to this school; student/teacher profiles themselves
+ * are not deleted (profiles.school_id is set null, teachers just lose the
+ * school link) — use deleteUserAccount() separately for that.
+ */
+export async function deleteSchool(schoolId: string): Promise<void> {
+  const { error } = await supabase.from('schools').delete().eq('id', schoolId);
+  if (error) throw error;
+}
+
 export async function createClass(input: { schoolId: string; name: string; gradeLabel: string }): Promise<void> {
   const { error } = await supabase
     .from('school_classes')
     .insert({ school_id: input.schoolId, name: input.name, grade_label: input.gradeLabel || null });
+  if (error) throw error;
+}
+
+/** Hard delete. FK constraints cascade to teacher_classes/student_classes and assignment_classes for this class. */
+export async function deleteClass(classId: string): Promise<void> {
+  const { error } = await supabase.from('school_classes').delete().eq('id', classId);
   if (error) throw error;
 }
 

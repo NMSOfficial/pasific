@@ -487,7 +487,13 @@
       "students": "Öğrenciler",
       "createClass": "Sınıf oluştur",
       "className": "Sınıf adı",
-      "gradeLabel": "Seviye etiketi"
+      "gradeLabel": "Seviye etiketi",
+      "deleteSchool": "Okulu sil",
+      "deleteSchoolConfirmTitle": "Bu okul kalıcı olarak silinsin mi?",
+      "deleteSchoolConfirmDescription": "Bu işlem okulun tüm sınıflarını, aktivasyon kodlarını, katalog konularını, ödevlerini ve gönderimlerini siler. Öğretmen ve öğrenci hesapları silinmez, sadece bu okulla bağlantıları kopar. Bu işlem geri alınamaz.",
+      "deleteClass": "Sınıfı sil",
+      "deleteClassConfirmTitle": "Bu sınıf silinsin mi?",
+      "deleteClassConfirmDescription": "Sınıftaki öğrencilerin sınıf bağlantısı kopacak. Bu işlem geri alınamaz."
     },
     "users": {
       "createTeacher": "Öğretmen hesabı oluştur",
@@ -495,7 +501,10 @@
       "assignClasses": "Sınıflara ata",
       "permissions": "Yetkiler",
       "suspendAccount": "Hesabı askıya al",
-      "reactivateAccount": "Hesabı yeniden etkinleştir"
+      "reactivateAccount": "Hesabı yeniden etkinleştir",
+      "deleteAccount": "Hesabı sil",
+      "deleteAccountConfirmTitle": "Bu hesap kalıcı olarak silinsin mi?",
+      "deleteAccountConfirmDescription": "Bu işlem giriş bilgilerini ve tüm verilerini siler. Bu işlem geri alınamaz."
     },
     "codes": {
       "createBatch": "Aktivasyon kodu grubu oluştur",

@@ -4,6 +4,7 @@ import { z, ZodError } from 'zod';
 import { gradeRequestSchema } from './gradingSchema.ts';
 import { gradeSubmission, GradingError } from './gemini.ts';
 import { requestPasswordReset } from './passwordReset.ts';
+import { deleteUserAccount } from './adminActions.ts';
 
 try {
   process.loadEnvFile();
@@ -64,6 +65,17 @@ const passwordResetLimiter = rateLimit({
   message: { error: 'Too many password reset requests. Please wait a few minutes and try again.' },
 });
 
+// Destructive and admin-only, but still bound this — a compromised admin
+// token shouldn't be able to script deleting the whole user base in one go.
+const adminActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.headers.authorization ?? ipKeyGenerator(req.ip ?? 'unknown'),
+  message: { error: 'Too many admin actions. Please wait a few minutes and try again.' },
+});
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -91,6 +103,32 @@ async function isAuthorized(authHeader: string | undefined): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// Same session-token check as isAuthorized(), plus a lookup of the caller's
+// own profile row (readable under RLS via "profile self or same-school
+// staff") to confirm they're actually super_admin before letting them
+// delete someone else's account.
+async function getRequesterRole(authHeader: string | undefined): Promise<string | null> {
+  if (!authHeader?.startsWith('Bearer ') || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  const token = authHeader.slice('Bearer '.length);
+  try {
+    const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+    });
+    if (!userRes.ok) return null;
+    const user = (await userRes.json()) as { id?: string };
+    if (!user.id) return null;
+
+    const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+    });
+    if (!profileRes.ok) return null;
+    const rows = (await profileRes.json()) as { role?: string }[];
+    return rows[0]?.role ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -164,6 +202,45 @@ app.post('/api/auth/request-password-reset', passwordResetLimiter, async (req, r
     console.error('[password-reset] unexpected error:', err);
     // Still don't leak failure details to an unauthenticated caller.
     res.json({ result: 'sent' });
+  }
+});
+
+const deleteUserRequestSchema = z.object({
+  userId: z.string().uuid(),
+});
+
+// Hard-deletes a teacher/student account (auth.users row + everything that
+// cascades from it — see adminActions.ts for why this can't be a plain
+// client-side table delete). super_admin only.
+app.post('/api/admin/delete-user', adminActionLimiter, async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    res.status(500).json({ error: 'Not configured on the server' });
+    return;
+  }
+
+  const role = await getRequesterRole(req.headers.authorization);
+  if (role !== 'super_admin') {
+    res.status(403).json({ error: 'Forbidden' });
+    return;
+  }
+
+  let body;
+  try {
+    body = deleteUserRequestSchema.parse(req.body);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      res.status(400).json({ error: 'Invalid request body', details: err.issues });
+      return;
+    }
+    throw err;
+  }
+
+  try {
+    await deleteUserAccount(body.userId, { supabaseUrl: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[admin] failed to delete user:', err);
+    res.status(502).json({ error: 'Failed to delete account' });
   }
 });
 
