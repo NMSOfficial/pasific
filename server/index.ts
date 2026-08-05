@@ -1,8 +1,9 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
-import { ZodError } from 'zod';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { z, ZodError } from 'zod';
 import { gradeRequestSchema } from './gradingSchema.ts';
 import { gradeSubmission, GradingError } from './gemini.ts';
+import { requestPasswordReset } from './passwordReset.ts';
 
 try {
   process.loadEnvFile();
@@ -14,6 +15,10 @@ const PORT = Number(process.env.PORT ?? 8787);
 const API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
+const APP_ORIGIN = process.env.APP_ORIGIN;
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 
 if (!API_KEY) {
@@ -21,6 +26,12 @@ if (!API_KEY) {
 }
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn('[server] SUPABASE_URL/SUPABASE_ANON_KEY not set — /api/grade will reject all requests until configured');
+}
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('[server] SUPABASE_SERVICE_ROLE_KEY is not set — /api/auth/request-password-reset will reject all requests until configured');
+}
+if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+  console.warn('[server] RESEND_API_KEY/RESEND_FROM_EMAIL not set — password reset links will be generated but not emailed until configured');
 }
 
 const app = express();
@@ -38,8 +49,19 @@ const gradeLimiter = rateLimit({
   limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.headers.authorization ?? req.ip ?? 'unknown',
+  keyGenerator: (req) => req.headers.authorization ?? ipKeyGenerator(req.ip ?? 'unknown'),
   message: { error: 'Too many grading requests. Please wait a few minutes and try again.' },
+});
+
+// Unauthenticated by design (the user isn't logged in yet), so this is
+// rate-limited tightly per IP to prevent it being used to spam an inbox or
+// enumerate usernames.
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password reset requests. Please wait a few minutes and try again.' },
 });
 
 app.use((req, res, next) => {
@@ -104,6 +126,44 @@ app.post('/api/grade', gradeLimiter, async (req, res) => {
     }
     console.error('[grading] unexpected error:', err);
     res.status(502).json({ error: 'Grading failed unexpectedly' });
+  }
+});
+
+const passwordResetRequestSchema = z.object({
+  username: z.string().min(1),
+  method: z.enum(['email', 'phone']),
+});
+
+app.post('/api/auth/request-password-reset', passwordResetLimiter, async (req, res) => {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    res.status(500).json({ error: 'Password reset is not configured on the server' });
+    return;
+  }
+
+  let body;
+  try {
+    body = passwordResetRequestSchema.parse(req.body);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      res.status(400).json({ error: 'Invalid request body', details: err.issues });
+      return;
+    }
+    throw err;
+  }
+
+  try {
+    const result = await requestPasswordReset(body.username, body.method, {
+      supabaseUrl: SUPABASE_URL,
+      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      resendApiKey: RESEND_API_KEY,
+      resendFromEmail: RESEND_FROM_EMAIL,
+      appOrigin: APP_ORIGIN,
+    });
+    res.json({ result });
+  } catch (err) {
+    console.error('[password-reset] unexpected error:', err);
+    // Still don't leak failure details to an unauthenticated caller.
+    res.json({ result: 'sent' });
   }
 });
 

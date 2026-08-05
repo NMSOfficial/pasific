@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, UserCog, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
-import { supabase } from '../../services/supabaseClient';
+import { requestPasswordReset } from '../../services/passwordResetClient';
 
 type Method = 'email' | 'phone' | 'teacher';
 type Result = 'sent' | 'no_recovery' | null;
@@ -17,10 +17,11 @@ export function ForgotPasswordPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (method === 'teacher') return;
     setSubmitting(true);
-    const { data } = await supabase.rpc('check_recovery_contact', { p_username: identifier.trim(), p_method: method });
+    const outcome = await requestPasswordReset(identifier.trim(), method);
     setSubmitting(false);
-    setResult((data as Result) ?? 'sent');
+    setResult(outcome);
   };
 
   const reset = () => {

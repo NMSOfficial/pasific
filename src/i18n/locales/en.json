@@ -168,8 +168,16 @@
       "sendCode": "Send recovery code",
       "noRecoveryTitle": "No recovery details on file",
       "noRecoveryDescription": "This account has no recovery email or phone number. Please ask your teacher to reset your password.",
-      "checkInbox": "If an account matches, a recovery code has been sent.",
+      "checkInbox": "If an account matches, a recovery link has been sent to the email on file.",
       "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Choose a new password for your account.",
+      "invalidTitle": "This link is invalid or has expired",
+      "invalidDescription": "Password reset links expire after a while. Request a new one to continue.",
+      "requestNewLink": "Request a new link",
+      "success": "Your password has been updated. You can now sign in with your new password."
     }
   },
   "roles": {

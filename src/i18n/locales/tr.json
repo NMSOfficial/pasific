@@ -168,8 +168,16 @@
       "sendCode": "Kurtarma kodu gönder",
       "noRecoveryTitle": "Kayıtlı kurtarma bilgisi yok",
       "noRecoveryDescription": "Bu hesapta kayıtlı bir kurtarma e-postası veya telefon numarası yok. Şifreni sıfırlaması için öğretmeninden yardım iste.",
-      "checkInbox": "Eşleşen bir hesap varsa kurtarma kodu gönderildi.",
+      "checkInbox": "Eşleşen bir hesap varsa, kayıtlı e-postaya bir kurtarma bağlantısı gönderildi.",
       "backToLogin": "Girişe dön"
+    },
+    "resetPassword": {
+      "title": "Yeni bir şifre belirle",
+      "subtitle": "Hesabın için yeni bir şifre seç.",
+      "invalidTitle": "Bu bağlantı geçersiz veya süresi dolmuş",
+      "invalidDescription": "Şifre sıfırlama bağlantıları bir süre sonra geçersiz olur. Devam etmek için yeni bir bağlantı iste.",
+      "requestNewLink": "Yeni bağlantı iste",
+      "success": "Şifren güncellendi. Artık yeni şifrenle giriş yapabilirsin."
     }
   },
   "roles": {

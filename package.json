@@ -26,6 +26,7 @@
     "react-i18next": "^17.0.11",
     "react-router-dom": "^7.18.2",
     "recharts": "^3.10.1",
+    "resend": "^6.18.1",
     "tsx": "^4.23.5",
     "zod": "^4.4.3"
   },
