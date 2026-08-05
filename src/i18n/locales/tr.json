@@ -569,6 +569,11 @@
   "guide": {
     "keyPhrases": "Faydalı ifadeler"
   },
+  "notifications": {
+    "title": "Bildirimler",
+    "markAllRead": "Tümünü okundu işaretle",
+    "empty": "Henüz bildirimin yok."
+  },
   "practice": {
     "newTitle": "Yeni Writing Çalışması",
     "step1": "Bir yazı türü ve seviye seç",

@@ -569,6 +569,11 @@
   "guide": {
     "keyPhrases": "Useful phrases"
   },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "You have no notifications yet."
+  },
   "practice": {
     "newTitle": "New Writing Practice",
     "step1": "Choose a writing type and level",

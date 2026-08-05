@@ -6,6 +6,7 @@ import { useAuth } from '../state/AuthContext';
 import { PasificLogo } from './PasificLogo';
 import { ThemeSelector } from './ThemeSelector';
 import { LanguageSelector } from './LanguageSelector';
+import { NotificationBell } from './NotificationBell';
 
 export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void }) {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
         <span className="desktop-only-inline">
           <LanguageSelector compact />
         </span>
+        <NotificationBell />
 
         <div ref={menuRef} style={{ position: 'relative' }}>
           <button
