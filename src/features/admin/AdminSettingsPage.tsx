@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components/PageHeader';
 import { ThemeSelector } from '../../components/ThemeSelector';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { PasswordChangeSection } from '../../components/PasswordChangeSection';
 
 export function AdminSettingsPage() {
   const { t } = useTranslation();
@@ -27,6 +28,8 @@ export function AdminSettingsPage() {
           </label>
           <button type="button" className="btn btn--primary" style={{ alignSelf: 'flex-start' }}>{t('common.save')}</button>
         </section>
+
+        <PasswordChangeSection />
 
         <section className="card card--padded" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           <h2 style={{ fontSize: 'var(--text-md)' }}>{t('settings.preferences')}</h2>

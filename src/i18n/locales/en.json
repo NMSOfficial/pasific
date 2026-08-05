@@ -541,7 +541,17 @@
     "noRecoveryPhone": "No recovery phone number on file",
     "preferences": "Preferences",
     "language": "Language",
-    "theme": "Theme"
+    "theme": "Theme",
+    "password": {
+      "title": "Change password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Update password",
+      "success": "Your password has been updated.",
+      "mismatch": "Passwords do not match.",
+      "tooShort": "Password must be at least 8 characters.",
+      "error": "Could not update password. Please try again."
+    }
   },
   "portfolio": {
     "history": "Writing history",

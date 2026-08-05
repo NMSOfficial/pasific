@@ -5,6 +5,7 @@ import type { StudentProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { ThemeSelector } from '../../components/ThemeSelector';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { PasswordChangeSection } from '../../components/PasswordChangeSection';
 import { fetchSchool, type SchoolSummary } from '../../services/adminData';
 import { fetchClass, type ClassMeta } from '../../services/teacherData';
 
@@ -42,6 +43,8 @@ export function StudentSettingsPage() {
             <Row label={t('auth.activate.phone')} value={student.phone ?? t('settings.noRecoveryPhone')} />
           </dl>
         </section>
+
+        <PasswordChangeSection />
 
         <section className="card card--padded" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <h2 style={{ fontSize: 'var(--text-md)' }}>{t('settings.preferences')}</h2>

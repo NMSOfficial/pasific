@@ -541,7 +541,17 @@
     "noRecoveryPhone": "Kayıtlı kurtarma telefon numarası yok",
     "preferences": "Tercihler",
     "language": "Dil",
-    "theme": "Tema"
+    "theme": "Tema",
+    "password": {
+      "title": "Şifre değiştir",
+      "new": "Yeni şifre",
+      "confirm": "Yeni şifre (tekrar)",
+      "submit": "Şifreyi güncelle",
+      "success": "Şifren güncellendi.",
+      "mismatch": "Şifreler eşleşmiyor.",
+      "tooShort": "Şifre en az 8 karakter olmalı.",
+      "error": "Şifre güncellenemedi. Lütfen tekrar dene."
+    }
   },
   "portfolio": {
     "history": "Yazı geçmişi",

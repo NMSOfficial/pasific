@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { ZodError } from 'zod';
 import { gradeRequestSchema } from './gradingSchema.ts';
 import { gradeSubmission, GradingError } from './gemini.ts';
@@ -23,7 +24,23 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 const app = express();
+// Railway/Vercel sit in front of this server as a reverse proxy; without this,
+// every request would appear to come from the proxy's IP, making per-IP rate
+// limiting useless (it would count all users as one).
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
+
+// Grading calls out to the paid Gemini API, so this limits both abuse and
+// runaway cost. Keyed by the caller's bearer token (stable per logged-in
+// session) rather than IP, since many students can share a school network.
+const gradeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.headers.authorization ?? req.ip ?? 'unknown',
+  message: { error: 'Too many grading requests. Please wait a few minutes and try again.' },
+});
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -55,7 +72,7 @@ async function isAuthorized(authHeader: string | undefined): Promise<boolean> {
   }
 }
 
-app.post('/api/grade', async (req, res) => {
+app.post('/api/grade', gradeLimiter, async (req, res) => {
   if (!API_KEY) {
     res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server' });
     return;

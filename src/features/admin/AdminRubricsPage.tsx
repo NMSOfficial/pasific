@@ -8,7 +8,9 @@ import { exportScoringReviewSummaryPdf } from '../../utils/pdf';
 import { fetchOverrideStats, type OverrideStat } from '../../services/contentData';
 
 const RUBRIC_VERSION = 'v1.2';
-const AI_MODEL_VERSION = 'pasific-scorer-mock-0.1';
+// Mirrors GEMINI_MODEL in server/gemini.ts — update both together if the
+// grading model changes.
+const AI_MODEL_VERSION = 'gemma-4-31b-it';
 
 export function AdminRubricsPage() {
   const { t, i18n } = useTranslation();

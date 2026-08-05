@@ -5,6 +5,7 @@ import type { TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { ThemeSelector } from '../../components/ThemeSelector';
 import { LanguageSelector } from '../../components/LanguageSelector';
+import { PasswordChangeSection } from '../../components/PasswordChangeSection';
 import { fetchSchool, type SchoolSummary } from '../../services/adminData';
 
 export function TeacherSettingsPage() {
@@ -37,6 +38,8 @@ export function TeacherSettingsPage() {
             {teacher.permissions.map((p) => <span key={p} className="badge badge--neutral">{p}</span>)}
           </div>
         </section>
+
+        <PasswordChangeSection />
 
         <section className="card card--padded" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <h2 style={{ fontSize: 'var(--text-md)' }}>{t('settings.preferences')}</h2>
