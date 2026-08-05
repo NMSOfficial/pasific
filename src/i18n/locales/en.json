@@ -91,6 +91,8 @@
       "classes": "Classes",
       "assignments": "Assignments",
       "catalog": "Catalog",
+      "examples": "Sample Library",
+      "activationCodes": "Activation Codes",
       "reports": "Reports",
       "school": "School",
       "team": "Team",
@@ -125,6 +127,8 @@
       "activateAccount": "Activate an account",
       "forgotPassword": "Forgot password?",
       "invalidCredentials": "Username or password is incorrect.",
+      "accountSuspended": "This account has been suspended. Contact your school admin.",
+      "accountExpired": "This account has expired. Contact your school admin to renew access.",
       "devRoleSwitch": "Demo: switch role",
       "demoHint": "This is a demo environment — any password works for these accounts."
     },
@@ -138,6 +142,7 @@
       "codeInvalid": "This activation code was not found. Check it and try again.",
       "codeExpired": "This activation code has expired. Ask your teacher for a new one.",
       "codeUsed": "This activation code has already been used.",
+      "codeRevoked": "This activation code has been revoked. Ask your teacher for a new one.",
       "linkedTo": "This code is linked to:",
       "step2Title": "Create your account",
       "chooseUsername": "Choose a username",
@@ -534,7 +539,7 @@
     },
     "rubrics": {
       "standardVersion": "Standard rubric version",
-      "aiModelVersion": "AI model version (placeholder)",
+      "aiModelVersion": "AI model version",
       "overrideStats": "Teacher override statistics",
       "avgOverride": "Average override",
       "overrideFrequency": "Override frequency"
@@ -618,6 +623,7 @@
     "correctionAttempt": "Show correction after my attempt"
   },
   "examples": {
+    "libraryTitle": "Sample Library",
     "performanceFilter": "Performance level",
     "strongPoints": "Strong points",
     "weakPoints": "Development areas",

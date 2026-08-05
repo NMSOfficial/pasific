@@ -292,7 +292,8 @@
   font-weight: var(--weight-semibold);
   color: var(--color-text);
 }
-a.assignment-card__title:hover, a.catalog-card__title:hover { color: var(--color-primary); }
+a.assignment-card__title:hover { color: var(--color-primary); }
+a.catalog-card:hover .catalog-card__title { color: var(--color-primary); }
 .assignment-card__meta, .catalog-card__meta {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,6 @@
 // Core domain types for Pasific. Mock data and future API responses conform to these shapes.
 
-export type CefrLevel = 'B1' | 'B2' | 'C1' | 'C2';
+export type CefrLevel = 'B1' | 'B1+' | 'B2' | 'B2+' | 'C1';
 
 export type WritingTypeId =
   | 'opinion_essay'
@@ -37,6 +37,8 @@ export interface BaseUser {
   email?: string;
   phone?: string;
   status: 'active' | 'suspended' | 'pending_password_reset';
+  /** Set from the activation code's own expiry when the account was created; undefined means it never expires. */
+  expiresAt?: string;
   createdAt: string;
   lastLoginAt?: string;
 }

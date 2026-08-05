@@ -1,7 +1,6 @@
 import type { CefrLevel, CriterionScore, RubricCriterion, WritingAnnotation, WritingTypeId } from '../types/entities';
 import { supabase } from './supabaseClient';
-
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+import { API_BASE } from './apiBase';
 
 export interface GradeInput {
   text: string;

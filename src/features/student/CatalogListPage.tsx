@@ -4,13 +4,14 @@ import { Search } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import { WRITING_TYPES } from '../../mock/writingTypes';
 import type { CatalogTopic, CefrLevel, StudentProfile } from '../../types/entities';
+import { CEFR_LEVELS } from '../../utils/cefr';
 import { PageHeader } from '../../components/PageHeader';
 import { CatalogCard } from '../../components/CatalogCard';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { fetchVisibleCatalogForSchool } from '../../services/contentData';
 
-const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
+const LEVELS = CEFR_LEVELS;
 
 export function CatalogListPage() {
   const { t } = useTranslation();

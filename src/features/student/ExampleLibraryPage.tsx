@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { CefrLevel, PerformanceBand, WritingExample } from '../../types/entities';
+import { CEFR_LEVELS } from '../../utils/cefr';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
@@ -9,10 +10,11 @@ import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { fetchExamples } from '../../services/exampleData';
 
-const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
+const LEVELS = CEFR_LEVELS;
 const BANDS: PerformanceBand[] = ['developing', 'meets_expectations', 'strong', 'advanced'];
 
-export function ExampleLibraryPage() {
+/** Shared by the student and teacher example-library screens (both allowed to browse, differ only in route prefix). */
+export function ExampleLibraryPage({ basePath = '/student' }: { basePath?: string }) {
   const { t } = useTranslation();
   const [allExamples, setAllExamples] = useState<WritingExample[] | null>(null);
   const [level, setLevel] = useState<CefrLevel | 'all'>('all');
@@ -31,7 +33,7 @@ export function ExampleLibraryPage() {
 
   return (
     <>
-      <PageHeader title={t('nav.student.examples')} />
+      <PageHeader title={t('examples.libraryTitle')} />
 
       <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginBottom: 'var(--space-5)' }}>
         <select className="select-control" style={{ width: 'auto' }} value={level} onChange={(e) => setLevel(e.target.value as CefrLevel | 'all')} aria-label={t('catalog.levelFilter')}>
@@ -49,7 +51,12 @@ export function ExampleLibraryPage() {
       ) : (
         <div className="card-grid">
           {examples.map((example) => (
-            <div key={example.id} className="card card--padded catalog-card">
+            <Link
+              key={example.id}
+              to={`${basePath}/examples/${example.id}`}
+              className="card card--padded catalog-card card--interactive"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
               <div className="catalog-card__header">
                 <div className="catalog-card__badges">
                   <WritingTypeBadge writingTypeId={example.writingTypeId} />
@@ -57,9 +64,9 @@ export function ExampleLibraryPage() {
                 </div>
                 <span className="badge badge--primary">{t(`performanceBand.${example.performanceBand}`)}</span>
               </div>
-              <Link to={`/student/examples/${example.id}`} className="catalog-card__title">{example.title}</Link>
+              <p className="catalog-card__title">{example.title}</p>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{example.overallScore}/100</p>
-            </div>
+            </Link>
           ))}
         </div>
       )}

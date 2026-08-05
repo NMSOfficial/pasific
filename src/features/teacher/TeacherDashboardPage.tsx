@@ -14,6 +14,7 @@ import { formatDate } from '../../utils/format';
 import { fetchTeacherClasses, fetchStudentsByIds } from '../../services/teacherData';
 import { fetchAssignmentsForTeacher } from '../../services/assignmentData';
 import { fetchSubmissionsForStudents } from '../../services/submissionData';
+import { fetchSchool } from '../../services/adminData';
 
 export function TeacherDashboardPage() {
   const { t, i18n } = useTranslation();
@@ -24,6 +25,11 @@ export function TeacherDashboardPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [studentsById, setStudentsById] = useState<Map<string, StudentProfile>>(new Map());
+  const [schoolName, setSchoolName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (teacher.schoolIds[0]) fetchSchool(teacher.schoolIds[0]).then((s) => setSchoolName(s?.name ?? null));
+  }, [teacher.schoolIds]);
 
   useEffect(() => {
     fetchTeacherClasses(teacher.id).then(async (classes) => {
@@ -67,6 +73,7 @@ export function TeacherDashboardPage() {
     <>
       <PageHeader
         title={t('nav.teacher.dashboard')}
+        subtitle={schoolName ?? undefined}
         actions={<Link to="/teacher/assignments/new" className="btn btn--primary"><PlusCircle size={16} aria-hidden="true" /> {t('teacher.dashboard.newAssignment')}</Link>}
       />
 

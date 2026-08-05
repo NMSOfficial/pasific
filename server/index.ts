@@ -41,6 +41,14 @@ const app = express();
 // limiting useless (it would count all users as one).
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
+// Defends against a trailing slash on the client's API base URL (e.g.
+// VITE_API_URL="https://host.app/") producing "https://host.app//api/grade" —
+// Express's exact path matching wouldn't otherwise match that against
+// "/api/grade" and every request would silently 404.
+app.use((req, _res, next) => {
+  req.url = req.url.replace(/\/{2,}/g, '/');
+  next();
+});
 
 // Grading calls out to the paid Gemini API, so this limits both abuse and
 // runaway cost. Keyed by the caller's bearer token (stable per logged-in
@@ -132,6 +140,26 @@ async function getRequesterRole(authHeader: string | undefined): Promise<string 
   }
 }
 
+// Gives the grader the platform's actual written definition of the target
+// level instead of just a bare "B1"/"C1" label, so scoring is anchored to
+// a concrete standard rather than the model's own (possibly inconsistent)
+// notion of what a level means. Best-effort: grading still proceeds
+// without it (falling back to the bare level) if the fetch fails.
+async function fetchLevelDescriptor(level: string, authHeader: string | undefined): Promise<string | undefined> {
+  if (!authHeader?.startsWith('Bearer ') || !SUPABASE_URL || !SUPABASE_ANON_KEY) return undefined;
+  const token = authHeader.slice('Bearer '.length);
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/cefr_level_descriptors?level=eq.${encodeURIComponent(level)}&select=descriptor`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY },
+    });
+    if (!res.ok) return undefined;
+    const rows = (await res.json()) as { descriptor?: string }[];
+    return rows[0]?.descriptor || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 app.post('/api/grade', gradeLimiter, async (req, res) => {
   if (!API_KEY) {
     res.status(500).json({ error: 'GEMINI_API_KEY is not configured on the server' });
@@ -154,7 +182,8 @@ app.post('/api/grade', gradeLimiter, async (req, res) => {
   }
 
   try {
-    const result = await gradeSubmission(body, API_KEY);
+    const levelDescriptor = await fetchLevelDescriptor(body.level, req.headers.authorization);
+    const result = await gradeSubmission(body, API_KEY, levelDescriptor);
     res.json(result);
   } catch (err) {
     if (err instanceof GradingError) {

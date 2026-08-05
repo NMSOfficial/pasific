@@ -97,7 +97,7 @@ export function SchoolCatalogPage() {
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{topic.prompt}</p>
 
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginTop: 'var(--space-2)' }}>
-                <Link to="/teacher/assignments/new" className="btn btn--secondary btn--sm">{t('teacher.catalog.assign')}</Link>
+                <Link to={`/teacher/assignments/new?topicId=${topic.id}`} className="btn btn--secondary btn--sm">{t('teacher.catalog.assign')}</Link>
 
                 {tab === 'pasific' && canManage && (
                   <>

@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { BarChart3, School, UsersRound, Settings, ChevronRight } from 'lucide-react';
+import { BarChart3, BookOpen, KeyRound, School, UsersRound, Settings, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../../components/PageHeader';
 
 const ITEMS = [
+  { to: '/teacher/examples', icon: BookOpen, labelKey: 'nav.teacher.examples' },
+  { to: '/teacher/activation-codes', icon: KeyRound, labelKey: 'nav.teacher.activationCodes' },
   { to: '/teacher/reports', icon: BarChart3, labelKey: 'nav.teacher.reports' },
   { to: '/teacher/school', icon: School, labelKey: 'nav.teacher.school' },
   { to: '/teacher/team', icon: UsersRound, labelKey: 'nav.teacher.team' },

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { CefrLevel } from '../../types/entities';
+import { CEFR_LEVELS } from '../../utils/cefr';
 import { PageHeader } from '../../components/PageHeader';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { fetchLevelDescriptors, updateLevelDescriptor } from '../../services/adminData';
 
-const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
+const LEVELS = CEFR_LEVELS;
 
 export function AdminLevelsPage() {
   const { t } = useTranslation();

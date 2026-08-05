@@ -91,6 +91,8 @@
       "classes": "Sınıflar",
       "assignments": "Ödevler",
       "catalog": "Katalog",
+      "examples": "Örnek Kütüphanesi",
+      "activationCodes": "Aktivasyon Kodları",
       "reports": "Raporlar",
       "school": "Okul",
       "team": "Ekip",
@@ -125,6 +127,8 @@
       "activateAccount": "Hesap aktive et",
       "forgotPassword": "Şifremi unuttum",
       "invalidCredentials": "Kullanıcı adı veya şifre hatalı.",
+      "accountSuspended": "Bu hesap askıya alınmış. Okul yöneticinle iletişime geç.",
+      "accountExpired": "Bu hesabın süresi dolmuş. Erişimi yenilemek için okul yöneticinle iletişime geç.",
       "devRoleSwitch": "Demo: rol değiştir",
       "demoHint": "Bu bir demo ortamıdır — bu hesaplar için herhangi bir şifre çalışır."
     },
@@ -138,6 +142,7 @@
       "codeInvalid": "Bu aktivasyon kodu bulunamadı. Kontrol edip tekrar dene.",
       "codeExpired": "Bu aktivasyon kodunun süresi dolmuş. Öğretmeninden yeni bir kod iste.",
       "codeUsed": "Bu aktivasyon kodu daha önce kullanılmış.",
+      "codeRevoked": "Bu aktivasyon kodu iptal edilmiş. Öğretmeninden yeni bir kod iste.",
       "linkedTo": "Bu kod şununla ilişkilendirildi:",
       "step2Title": "Hesabını oluştur",
       "chooseUsername": "Bir kullanıcı adı seç",
@@ -534,7 +539,7 @@
     },
     "rubrics": {
       "standardVersion": "Standart rubrik sürümü",
-      "aiModelVersion": "AI model sürümü (yer tutucu)",
+      "aiModelVersion": "AI model sürümü",
       "overrideStats": "Öğretmen değişiklik istatistikleri",
       "avgOverride": "Ortalama değişiklik",
       "overrideFrequency": "Değişiklik sıklığı"
@@ -618,6 +623,7 @@
     "correctionAttempt": "Denememden sonra düzeltmeyi göster"
   },
   "examples": {
+    "libraryTitle": "Örnek Kütüphanesi",
     "performanceFilter": "Performans düzeyi",
     "strongPoints": "Güçlü yönler",
     "weakPoints": "Gelişim alanları",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
-import { Maximize2, Minimize2, WifiOff, CheckCircle2, HelpCircle } from 'lucide-react';
+import { Maximize2, Minimize2, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { CatalogTopic, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -35,7 +35,6 @@ export function PracticeWritingPage() {
   const [topic, setTopic] = useState<CatalogTopic | undefined>(undefined);
   const [text, setText] = useState('');
   const [fullscreen, setFullscreen] = useState(false);
-  const [simulateOffline, setSimulateOffline] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
@@ -50,7 +49,7 @@ export function PracticeWritingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
 
-  const { status, lastSavedAt } = useAutosave(text, (value) => { if (submission) void saveSubmissionDraft(submission.id, value); }, { simulateOffline });
+  const { status, lastSavedAt } = useAutosave(text, (value) => { if (submission) void saveSubmissionDraft(submission.id, value); });
 
   if (submission === undefined) return <LoadingSkeleton height="12rem" />;
   if (!submission || submission.studentId !== student.id) return <Navigate to="/student/practice" replace />;
@@ -122,9 +121,6 @@ export function PracticeWritingPage() {
               {lastSavedAt && <span className="field__hint">{t('editor.lastSaved', { time: formatDateTime(lastSavedAt, i18n.resolvedLanguage ?? 'tr') })}</span>}
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button type="button" className="icon-btn" onClick={() => setSimulateOffline((v) => !v)} aria-pressed={simulateOffline} title={t('editor.simulateOffline')}>
-                <WifiOff size={16} aria-hidden="true" color={simulateOffline ? 'var(--color-error)' : undefined} />
-              </button>
               <button type="button" className="icon-btn" onClick={() => setFullscreen((v) => !v)} aria-label={fullscreen ? t('editor.exitFullscreen') : t('editor.fullscreen')}>
                 {fullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
               </button>

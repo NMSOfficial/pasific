@@ -57,8 +57,12 @@ export function ActivatePage() {
       setCodeError(t('auth.activate.codeExpired'));
       return;
     }
-    if (result.code_status === 'used' || result.code_status === 'revoked') {
+    if (result.code_status === 'used') {
       setCodeError(t('auth.activate.codeUsed'));
+      return;
+    }
+    if (result.code_status === 'revoked') {
+      setCodeError(t('auth.activate.codeRevoked'));
       return;
     }
     setValidatedCode({ code: code.trim(), role: result.code_role, schoolName: result.school_name, className: result.class_name });

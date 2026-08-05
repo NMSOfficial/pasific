@@ -35,6 +35,8 @@ export const TEACHER_SIDEBAR_NAV: NavItem[] = [
   { key: 'classes', to: '/teacher/classes', icon: Users, labelKey: 'nav.teacher.classes' },
   { key: 'assignments', to: '/teacher/assignments', icon: FileStack, labelKey: 'nav.teacher.assignments' },
   { key: 'catalog', to: '/teacher/catalog', icon: Library, labelKey: 'nav.teacher.catalog' },
+  { key: 'examples', to: '/teacher/examples', icon: BookOpen, labelKey: 'nav.teacher.examples' },
+  { key: 'activationCodes', to: '/teacher/activation-codes', icon: KeyRound, labelKey: 'nav.teacher.activationCodes' },
   { key: 'reports', to: '/teacher/reports', icon: BarChart3, labelKey: 'nav.teacher.reports' },
   { key: 'school', to: '/teacher/school', icon: School, labelKey: 'nav.teacher.school' },
   { key: 'team', to: '/teacher/team', icon: UsersRound, labelKey: 'nav.teacher.team' },

@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient';
-
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+import { API_BASE } from './apiBase';
 
 /**
  * Hard-deletes a teacher/student account via the server (service-role key,

@@ -11,6 +11,27 @@ const MUTED = '#4c5a68';
 const BORDER = '#dbe2e9';
 const FONT = PDF_FONT_FAMILY;
 
+let cachedLogo: string | null = null;
+
+/** Fetched once per session and cached — the icon mark (not the full wordmark lockup) reads cleanly at header size. */
+async function ensurePasificLogo(): Promise<string | null> {
+  if (cachedLogo) return cachedLogo;
+  try {
+    const res = await fetch('/brand/logo-color-icon.png');
+    const buf = await res.arrayBuffer();
+    let binary = '';
+    const bytes = new Uint8Array(buf);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    cachedLogo = `data:image/png;base64,${btoa(binary)}`;
+    return cachedLogo;
+  } catch {
+    return null; // header still renders fine with just the wordmark if the fetch fails
+  }
+}
+
 async function createPdfDoc(title: string): Promise<jsPDF> {
   // Loaded on demand so jsPDF (and its html2canvas/DOMPurify deps) never bloats the main bundle.
   const { jsPDF: JsPdf } = await import('jspdf');
@@ -20,13 +41,20 @@ async function createPdfDoc(title: string): Promise<jsPDF> {
   return doc;
 }
 
-function drawHeader(doc: jsPDF, title: string, subtitle: string) {
+async function drawHeader(doc: jsPDF, title: string, subtitle: string) {
   doc.setFillColor(NAVY);
   doc.rect(0, 0, PAGE_WIDTH, 24, 'F');
+
+  const logo = await ensurePasificLogo();
+  const wordmarkX = logo ? PAGE_MARGIN + 9 : PAGE_MARGIN;
+  if (logo) {
+    // Original is square; a 7mm mark sits nicely on the 24mm-tall navy band.
+    doc.addImage(logo, 'PNG', PAGE_MARGIN, 8.5, 7, 7);
+  }
   doc.setTextColor('#ffffff');
   doc.setFont(FONT, 'bold');
   doc.setFontSize(16);
-  doc.text('Pasific', PAGE_MARGIN, 15);
+  doc.text('Pasific', wordmarkX, 15);
   doc.setFont(FONT, 'normal');
   doc.setFontSize(9);
   doc.text('Developed by Ethosoft', PAGE_WIDTH - PAGE_MARGIN, 15, { align: 'right' });
@@ -95,7 +123,7 @@ export interface SubmissionPdfContext {
 export async function exportSubmissionResultPdf(ctx: SubmissionPdfContext) {
   const { submission, studentName, schoolName, assignmentTitle, locale, criterionLabel } = ctx;
   const doc = await createPdfDoc('Writing Result');
-  let y = drawHeader(doc, assignmentTitle ?? submission.topicTitle, `${studentName}${schoolName ? ' — ' + schoolName : ''}`);
+  let y = await drawHeader(doc, assignmentTitle ?? submission.topicTitle, `${studentName}${schoolName ? ' — ' + schoolName : ''}`);
 
   y = sectionLabel(doc, 'Summary', y);
   const submittedLabel = submission.submittedAt ? formatDateTime(submission.submittedAt, locale) : '—';
@@ -135,7 +163,7 @@ export interface ClassReportContext {
 
 export async function exportClassReportPdf(ctx: ClassReportContext) {
   const doc = await createPdfDoc('Class Report');
-  let y = drawHeader(doc, ctx.assignmentTitle, `${ctx.className}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
+  let y = await drawHeader(doc, ctx.assignmentTitle, `${ctx.className}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
 
   y = sectionLabel(doc, 'Summary', y);
   y = bodyText(doc, `Average score: ${ctx.averageScore ?? '—'} / 100    Students: ${ctx.rows.length}`, y);
@@ -160,30 +188,51 @@ export async function exportClassReportPdf(ctx: ClassReportContext) {
 export interface ActivationSheetContext {
   schoolName: string;
   className: string;
+  role: 'student' | 'teacher';
   locale: string;
   codes: { code: string; expiresAt: string }[];
 }
 
+/**
+ * One role per sheet by design (exportActivationCodesPdf is always called
+ * with codes already filtered to a single role) — printing student and
+ * teacher codes on the same page invited mix-ups when handing them out.
+ * Each code gets its own dashed-line strip so a teacher can cut the sheet
+ * into individual slips with scissors, the way these are actually handed
+ * out to a room full of students.
+ */
 export async function exportActivationCodesPdf(ctx: ActivationSheetContext) {
   const doc = await createPdfDoc('Activation Codes');
-  let y = drawHeader(doc, 'Student Activation Codes', `${ctx.schoolName} — ${ctx.className}`);
+  const roleLabel = ctx.role === 'teacher' ? 'Teacher Activation Codes' : 'Student Activation Codes';
+  let y = await drawHeader(doc, roleLabel, ctx.role === 'student' ? `${ctx.schoolName} — ${ctx.className}` : ctx.schoolName);
 
   y = sectionLabel(doc, `${ctx.codes.length} codes`, y);
+  const rowHeight = 14;
   for (const c of ctx.codes) {
-    y = ensureSpace(doc, y, 10);
+    y = ensureSpace(doc, y, rowHeight + 4);
     doc.setFont(FONT, 'bold');
-    doc.setFontSize(12);
+    doc.setFontSize(13);
     doc.setTextColor('#101a26');
-    doc.text(c.code, PAGE_MARGIN, y);
+    doc.text(c.code, PAGE_MARGIN + 3, y + 7);
     doc.setFont(FONT, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(MUTED);
-    doc.text(`expires ${formatDateTime(c.expiresAt, ctx.locale)}`, PAGE_WIDTH - PAGE_MARGIN, y, { align: 'right' });
-    y += 9;
+    doc.text(`expires ${formatDateTime(c.expiresAt, ctx.locale)}`, PAGE_WIDTH - PAGE_MARGIN - 3, y + 7, { align: 'right' });
+
+    // Cut line below this slip, with a scissors mark in the margin.
+    y += rowHeight;
+    doc.setDrawColor(BORDER);
+    doc.setLineDashPattern([1.5, 1.5], 0);
+    doc.line(PAGE_MARGIN, y, PAGE_WIDTH - PAGE_MARGIN, y);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(8);
+    doc.setTextColor(MUTED);
+    doc.text('✂', PAGE_MARGIN - 4, y + 1);
+    y += 4;
   }
 
   drawFooter(doc, `Generated ${formatDateTime(new Date().toISOString(), ctx.locale)}`);
-  doc.save(`pasific-activation-codes-${Date.now()}.pdf`);
+  doc.save(`pasific-activation-codes-${ctx.role}-${Date.now()}.pdf`);
 }
 
 export interface PortfolioPdfContext {
@@ -198,7 +247,7 @@ export interface PortfolioPdfContext {
 
 export async function exportPortfolioPdf(ctx: PortfolioPdfContext) {
   const doc = await createPdfDoc('Portfolio Summary');
-  let y = drawHeader(doc, 'Portfolio Summary', `${ctx.studentName}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
+  let y = await drawHeader(doc, 'Portfolio Summary', `${ctx.studentName}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
 
   y = sectionLabel(doc, 'Overview', y);
   y = bodyText(doc, `Completed writings: ${ctx.totalCompleted}    Writing types practised: ${ctx.writingTypeCount}`, y);
@@ -237,7 +286,7 @@ export interface ClassProgressPdfContext {
 
 export async function exportClassProgressPdf(ctx: ClassProgressPdfContext) {
   const doc = await createPdfDoc('Class Progress Report');
-  let y = drawHeader(doc, 'Class Progress Report', `${ctx.className}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
+  let y = await drawHeader(doc, 'Class Progress Report', `${ctx.className}${ctx.schoolName ? ' — ' + ctx.schoolName : ''}`);
 
   y = sectionLabel(doc, 'Class criterion averages', y);
   for (const c of ctx.criterionAverages) {
@@ -274,7 +323,7 @@ export interface SchoolUsagePdfContext {
 
 export async function exportSchoolUsagePdf(ctx: SchoolUsagePdfContext) {
   const doc = await createPdfDoc('School Usage Summary');
-  let y = drawHeader(doc, 'School Usage Summary', `${ctx.schools.length} schools`);
+  let y = await drawHeader(doc, 'School Usage Summary', `${ctx.schools.length} schools`);
 
   for (const school of ctx.schools) {
     y = ensureSpace(doc, y, 10);
@@ -301,7 +350,7 @@ export interface ScoringReviewPdfContext {
 
 export async function exportScoringReviewSummaryPdf(ctx: ScoringReviewPdfContext) {
   const doc = await createPdfDoc('Scoring Review Summary');
-  let y = drawHeader(doc, 'Scoring Review Summary', `Rubric ${ctx.rubricVersion} · Model ${ctx.aiModelVersion}`);
+  let y = await drawHeader(doc, 'Scoring Review Summary', `Rubric ${ctx.rubricVersion} · Model ${ctx.aiModelVersion}`);
 
   y = sectionLabel(doc, 'Teacher override statistics', y);
   for (const s of ctx.overrideStats) {

@@ -17,6 +17,7 @@ export async function fetchAppUser(userId: string): Promise<AppUser | null> {
     email: (profile.email as string | null) ?? undefined,
     phone: (profile.phone as string | null) ?? undefined,
     status: profile.status as AppUser['status'],
+    expiresAt: (profile.expires_at as string | null) ?? undefined,
     createdAt: profile.created_at as string,
     lastLoginAt: (profile.last_login_at as string | null) ?? undefined,
   };

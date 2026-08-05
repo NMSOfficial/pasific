@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, PlusCircle, X } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import { standardRubric } from '../../mock/rubric';
 import { WRITING_TYPES } from '../../mock/writingTypes';
 import type { AiSupportMode, AssignmentRubric, CatalogTopic, CefrLevel, TeacherProfile, WritingTypeId } from '../../types/entities';
+import { CEFR_LEVELS } from '../../utils/cefr';
 import { PageHeader } from '../../components/PageHeader';
 import { CatalogCard } from '../../components/CatalogCard';
 import { RubricEditor } from '../../components/RubricEditor';
@@ -17,13 +18,15 @@ import { fetchTeacherClasses, type ClassMeta } from '../../services/teacherData'
 import { createAssignment } from '../../services/assignmentData';
 
 const STEPS = ['stepTopic', 'stepDetails', 'stepAiSupport', 'stepScoring', 'stepReview'] as const;
-const LEVELS: CefrLevel[] = ['B1', 'B2', 'C1', 'C2'];
+const LEVELS = CEFR_LEVELS;
 const AI_MODES: AiSupportMode[] = ['none', 'critical_alerts_only', 'guided_practice'];
 
 export function AssignmentBuilderPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedTopicId = searchParams.get('topicId') ?? undefined;
   const teacher = user as TeacherProfile;
 
   const [step, setStep] = useState(0);
@@ -71,6 +74,15 @@ export function AssignmentBuilderPage() {
     setSelectedTopicId(topic.id);
     applyTopic(topic);
   };
+
+  // Arriving from a Catalog card's "Assign" button — pre-select that exact
+  // topic instead of making the teacher find and click it again.
+  useEffect(() => {
+    if (!preselectedTopicId || !availableTopics) return;
+    const topic = availableTopics.find((t2) => t2.id === preselectedTopicId);
+    if (topic) handleSelectExisting(topic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedTopicId, availableTopics]);
 
   const handleCreateTopicAndContinue = async () => {
     const created = await createSchoolCatalogTopic({
@@ -143,11 +155,26 @@ export function AssignmentBuilderPage() {
         ))}
       </div>
 
+      {step < 4 && (
+        <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
+          {step > 0 && <button type="button" className="btn btn--secondary" onClick={() => setStep((s) => s - 1)}>{t('common.back')}</button>}
+          <button type="button" className="btn btn--primary" disabled={!canGoNext()} onClick={() => setStep((s) => s + 1)}>{t('common.next')}</button>
+        </div>
+      )}
+
       {step === 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <div className="segmented-control">
-            <button type="button" className={`segmented-control__option ${topicMode === 'existing' ? 'is-active' : ''}`} onClick={() => setTopicMode('existing')}>{t('teacher.assignments.chooseFromPasific')} / {t('teacher.assignments.chooseFromSchool')}</button>
-            <button type="button" className={`segmented-control__option ${topicMode === 'new' ? 'is-active' : ''}`} onClick={() => setTopicMode('new')}>{t('teacher.assignments.createNewTopic')}</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: 'var(--text-md)', fontWeight: 'var(--weight-semibold)' }}>{t('teacher.assignments.stepTopic')}</h2>
+            <button
+              type="button"
+              className="btn btn--secondary btn--sm"
+              onClick={() => setTopicMode((m) => (m === 'new' ? 'existing' : 'new'))}
+              aria-label={topicMode === 'new' ? t('common.cancel') : t('teacher.assignments.createNewTopic')}
+              title={topicMode === 'new' ? t('common.cancel') : t('teacher.assignments.createNewTopic')}
+            >
+              {topicMode === 'new' ? <X size={16} aria-hidden="true" /> : <PlusCircle size={16} aria-hidden="true" />}
+            </button>
           </div>
 
           {topicMode === 'existing' ? (
@@ -279,12 +306,6 @@ export function AssignmentBuilderPage() {
         </div>
       )}
 
-      {step < 4 && (
-        <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-6)' }}>
-          {step > 0 && <button type="button" className="btn btn--secondary" onClick={() => setStep((s) => s - 1)}>{t('common.back')}</button>}
-          <button type="button" className="btn btn--primary" disabled={!canGoNext()} onClick={() => setStep((s) => s + 1)}>{t('common.next')}</button>
-        </div>
-      )}
       {step === 4 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <button type="button" className="btn btn--secondary" onClick={() => setStep((s) => s - 1)}>{t('common.back')}</button>

@@ -15,6 +15,19 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * `status`/`expiresAt` were being fetched into AppUser but never actually
+ * checked anywhere — a suspended account (or, once activation codes started
+ * carrying an account expiry, an expired one) could still sign in and use
+ * the app freely. This is the one place that matters: block here and every
+ * other check (RoleGuard, RLS, ...) never needs to know about either.
+ */
+function isAccountUsable(appUser: AppUser): boolean {
+  if (appUser.status === 'suspended') return false;
+  if (appUser.expiresAt && new Date(appUser.expiresAt).getTime() <= Date.now()) return false;
+  return true;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+      if (appUser && !isAccountUsable(appUser)) {
+        await supabase.auth.signOut();
+        if (active) { setUser(null); setLoading(false); }
+        return;
+      }
       if (active) {
         setUser(appUser);
         setLoading(false);
@@ -32,6 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const appUser = session?.user ? await fetchAppUser(session.user.id) : null;
+      if (appUser && !isAccountUsable(appUser)) {
+        await supabase.auth.signOut();
+        if (active) setUser(null);
+        return;
+      }
       if (active) setUser(appUser);
     });
 
@@ -50,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const appUser = await fetchAppUser(data.user.id);
     if (!appUser) return { ok: false as const, errorKey: 'auth.login.invalidCredentials' };
+
+    if (!isAccountUsable(appUser)) {
+      await supabase.auth.signOut();
+      const errorKey = appUser.status === 'suspended' ? 'auth.login.accountSuspended' : 'auth.login.accountExpired';
+      return { ok: false as const, errorKey };
+    }
 
     setUser(appUser);
     void markLogin(data.user.id);

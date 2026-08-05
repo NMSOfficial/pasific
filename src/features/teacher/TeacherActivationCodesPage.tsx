@@ -1,56 +1,51 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../state/AuthContext';
-import type { AdminProfile } from '../../types/entities';
+import type { TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
 import { PdfExportButton } from '../../components/PdfExportButton';
+import { PermissionGuard } from '../../components/PermissionGuard';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { exportActivationCodesPdf } from '../../utils/pdf';
 import { formatDate } from '../../utils/format';
 import {
-  fetchSchools, fetchClassesForSchool, fetchActivationCodes, createActivationCodeBatch, revokeActivationCode,
+  fetchSchool, fetchClassesForSchool, fetchActivationCodes, createActivationCodeBatch, revokeActivationCode,
   type SchoolSummary, type ClassRow, type ActivationCodeRow,
 } from '../../services/adminData';
 
-export function AdminActivationCodesPage() {
+/** Same screen as the admin's, scoped to the teacher's own school — no school picker. */
+export function TeacherActivationCodesPage() {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const admin = user as AdminProfile;
+  const teacher = user as TeacherProfile;
+  const schoolId = teacher.schoolIds[0];
 
-  const [schools, setSchools] = useState<SchoolSummary[] | null>(null);
-  const [schoolId, setSchoolId] = useState('');
+  const [school, setSchool] = useState<SchoolSummary | null>(null);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [classId, setClassId] = useState('');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [count, setCount] = useState(10);
   const [expiresAt, setExpiresAt] = useState('2026-12-31');
-  const [codes, setCodes] = useState<ActivationCodeRow[]>([]);
+  const [codes, setCodes] = useState<ActivationCodeRow[] | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    fetchSchools().then((list) => {
-      setSchools(list);
-      if (list[0]) setSchoolId(list[0].id);
-    });
-  }, []);
-
-  const reloadCodes = useCallback((forSchoolId: string) => {
-    if (!forSchoolId) return;
-    fetchActivationCodes(forSchoolId).then(setCodes);
-  }, []);
+  const reloadCodes = useCallback(() => {
+    if (schoolId) fetchActivationCodes(schoolId).then(setCodes);
+  }, [schoolId]);
 
   useEffect(() => {
     if (!schoolId) return;
+    fetchSchool(schoolId).then(setSchool);
     fetchClassesForSchool(schoolId).then((list) => {
       setClasses(list);
       setClassId(list[0]?.id ?? '');
     });
-    reloadCodes(schoolId);
+    reloadCodes();
   }, [schoolId, reloadCodes]);
 
-  if (!schools) return <LoadingSkeleton height="12rem" />;
+  if (codes === null) return <LoadingSkeleton height="12rem" />;
 
   const handleGenerate = async () => {
     if (role === 'student' && !classId) return;
@@ -63,44 +58,36 @@ export function AdminActivationCodesPage() {
       expiresAt: new Date(expiresAt).toISOString(),
     });
     setGenerating(false);
-    reloadCodes(schoolId);
+    reloadCodes();
   };
 
-  const school = schools.find((s) => s.id === schoolId);
-
   return (
-    <>
-      <PageHeader title={t('nav.admin.activationCodes')} />
+    <PermissionGuard permission="manage_students">
+      <PageHeader title={t('nav.admin.activationCodes')} subtitle={school?.name} />
 
       <div className="card card--padded" style={{ marginBottom: 'var(--space-6)', display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'flex-end' }}>
         <div className="field" style={{ minWidth: '10rem' }}>
-          <label className="field__label" htmlFor="codes-school">{t('admin.codes.school')}</label>
-          <select id="codes-school" className="select-control" value={schoolId} onChange={(e) => setSchoolId(e.target.value)}>
-            {schools.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div className="field" style={{ minWidth: '10rem' }}>
-          <label className="field__label" htmlFor="codes-role">{t('common.role')}</label>
-          <select id="codes-role" className="select-control" value={role} onChange={(e) => setRole(e.target.value as 'student' | 'teacher')}>
+          <label className="field__label" htmlFor="tcodes-role">{t('common.role')}</label>
+          <select id="tcodes-role" className="select-control" value={role} onChange={(e) => setRole(e.target.value as 'student' | 'teacher')}>
             <option value="student">{t('roles.student')}</option>
             <option value="teacher">{t('roles.teacher')}</option>
           </select>
         </div>
         {role === 'student' && (
           <div className="field" style={{ minWidth: '10rem' }}>
-            <label className="field__label" htmlFor="codes-class">{t('admin.codes.class')}</label>
-            <select id="codes-class" className="select-control" value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <label className="field__label" htmlFor="tcodes-class">{t('admin.codes.class')}</label>
+            <select id="tcodes-class" className="select-control" value={classId} onChange={(e) => setClassId(e.target.value)}>
               {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
         )}
         <div className="field" style={{ width: '8rem' }}>
-          <label className="field__label" htmlFor="codes-count">{t('admin.codes.count')}</label>
-          <input id="codes-count" type="number" className="input-control" min={1} max={100} value={count} onChange={(e) => setCount(Number(e.target.value))} />
+          <label className="field__label" htmlFor="tcodes-count">{t('admin.codes.count')}</label>
+          <input id="tcodes-count" type="number" className="input-control" min={1} max={100} value={count} onChange={(e) => setCount(Number(e.target.value))} />
         </div>
         <div className="field" style={{ width: '10rem' }}>
-          <label className="field__label" htmlFor="codes-expires">{t('admin.codes.expiresAt')}</label>
-          <input id="codes-expires" type="date" className="input-control" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+          <label className="field__label" htmlFor="tcodes-expires">{t('admin.codes.expiresAt')}</label>
+          <input id="tcodes-expires" type="date" className="input-control" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
         </div>
         <button type="button" className="btn btn--primary" onClick={handleGenerate} disabled={generating || (role === 'student' && !classId)}>{t('admin.codes.generate')}</button>
         <PdfExportButton
@@ -140,13 +127,13 @@ export function AdminActivationCodesPage() {
         destructive
         onConfirm={async () => {
           if (revokeTarget) {
-            await revokeActivationCode(revokeTarget, { id: admin.id, displayName: admin.displayName });
-            reloadCodes(schoolId);
+            await revokeActivationCode(revokeTarget, { id: teacher.id, displayName: teacher.displayName });
+            reloadCodes();
           }
           setRevokeTarget(null);
         }}
         onCancel={() => setRevokeTarget(null)}
       />
-    </>
+    </PermissionGuard>
   );
 }

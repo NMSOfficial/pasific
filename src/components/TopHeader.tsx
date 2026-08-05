@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Menu, ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../state/AuthContext';
+import type { TeacherProfile } from '../types/entities';
 import { PasificLogo } from './PasificLogo';
 import { ThemeSelector } from './ThemeSelector';
 import { LanguageSelector } from './LanguageSelector';
 import { NotificationBell } from './NotificationBell';
+import { fetchSchool } from '../services/adminData';
 
 export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void }) {
   const { t } = useTranslation();
@@ -14,6 +16,7 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [schoolName, setSchoolName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -23,6 +26,12 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (user?.role !== 'teacher') return;
+    const schoolId = (user as TeacherProfile).schoolIds[0];
+    if (schoolId) fetchSchool(schoolId).then((s) => setSchoolName(s?.name ?? null));
+  }, [user]);
 
   return (
     <header className="top-header">
@@ -69,7 +78,10 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
             <div role="menu" className="dropdown-menu">
               <div className="dropdown-menu__section">
                 <p className="dropdown-menu__label">{user?.displayName}</p>
-                <p className="dropdown-menu__sublabel">{user && t(`roles.${user.role}`)}</p>
+                <p className="dropdown-menu__sublabel">
+                  {user && t(`roles.${user.role}`)}
+                  {schoolName && ` · ${schoolName}`}
+                </p>
               </div>
               <div className="mobile-only" style={{ padding: 'var(--space-2) var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
                 <ThemeSelector compact />

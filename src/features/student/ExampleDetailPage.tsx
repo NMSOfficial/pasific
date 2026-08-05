@@ -17,7 +17,7 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useIsMobile } from '../../utils/useIsMobile';
 import { fetchExample } from '../../services/exampleData';
 
-export function ExampleDetailPage() {
+export function ExampleDetailPage({ basePath = '/student' }: { basePath?: string }) {
   const { t } = useTranslation();
   const { exampleId } = useParams();
   const isMobile = useIsMobile();
@@ -28,7 +28,7 @@ export function ExampleDetailPage() {
     if (exampleId) fetchExample(exampleId).then(setExample);
   }, [exampleId]);
 
-  if (example === null) return <Navigate to="/student/examples" replace />;
+  if (example === null) return <Navigate to={`${basePath}/examples`} replace />;
   if (example === undefined) return <LoadingSkeleton height="12rem" />;
 
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;

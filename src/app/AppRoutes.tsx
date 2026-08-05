@@ -44,6 +44,7 @@ import { SchoolSettingsPage } from '../features/teacher/SchoolSettingsPage';
 import { TeamPage } from '../features/teacher/TeamPage';
 import { TeacherSettingsPage } from '../features/teacher/TeacherSettingsPage';
 import { TeacherMobileMenuPage } from '../features/teacher/TeacherMobileMenuPage';
+import { TeacherActivationCodesPage } from '../features/teacher/TeacherActivationCodesPage';
 
 import { AdminDashboardPage } from '../features/admin/AdminDashboardPage';
 import { AdminSchoolListPage } from '../features/admin/AdminSchoolListPage';
@@ -111,6 +112,9 @@ export function AppRoutes() {
         <Route path="assignments/:assignmentId/results" element={<AssignmentResultsPage />} />
         <Route path="submissions/:submissionId" element={<TeacherSubmissionReviewPage />} />
         <Route path="catalog" element={<SchoolCatalogPage />} />
+        <Route path="examples" element={<ExampleLibraryPage basePath="/teacher" />} />
+        <Route path="examples/:exampleId" element={<ExampleDetailPage basePath="/teacher" />} />
+        <Route path="activation-codes" element={<TeacherActivationCodesPage />} />
         <Route path="reports" element={<TeacherReportsPage />} />
         <Route path="school" element={<SchoolSettingsPage />} />
         <Route path="team" element={<TeamPage />} />
