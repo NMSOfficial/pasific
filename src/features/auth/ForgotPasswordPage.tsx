@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Mail, Phone, UserCog, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, UserCog, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AuthLayout } from './AuthLayout';
 import { requestPasswordReset } from '../../services/passwordResetClient';
 
-type Method = 'email' | 'phone' | 'teacher';
+type Method = 'email' | 'teacher';
 type Result = 'sent' | 'no_recovery' | null;
 
 export function ForgotPasswordPage() {
@@ -15,11 +15,11 @@ export function ForgotPasswordPage() {
   const [result, setResult] = useState<Result>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     if (method === 'teacher') return;
     setSubmitting(true);
-    const outcome = await requestPasswordReset(identifier.trim(), method);
+    const outcome = await requestPasswordReset(identifier.trim(), 'email');
     setSubmitting(false);
     setResult(outcome);
   };
@@ -39,9 +39,6 @@ export function ForgotPasswordPage() {
       <div role="tablist" aria-label={t('auth.forgotPassword.title')} className="segmented-control" style={{ alignSelf: 'center' }}>
         <button type="button" role="tab" aria-selected={method === 'email'} className={`segmented-control__option ${method === 'email' ? 'is-active' : ''}`} onClick={() => { setMethod('email'); reset(); }}>
           <Mail size={13} aria-hidden="true" style={{ marginRight: 4 }} />{t('auth.forgotPassword.byEmail')}
-        </button>
-        <button type="button" role="tab" aria-selected={method === 'phone'} className={`segmented-control__option ${method === 'phone' ? 'is-active' : ''}`} onClick={() => { setMethod('phone'); reset(); }}>
-          <Phone size={13} aria-hidden="true" style={{ marginRight: 4 }} />{t('auth.forgotPassword.byPhone')}
         </button>
         <button type="button" role="tab" aria-selected={method === 'teacher'} className={`segmented-control__option ${method === 'teacher' ? 'is-active' : ''}`} onClick={() => { setMethod('teacher'); reset(); }}>
           <UserCog size={13} aria-hidden="true" style={{ marginRight: 4 }} />{t('auth.forgotPassword.askTeacher')}
@@ -69,7 +66,7 @@ export function ForgotPasswordPage() {
               id="recovery-identifier"
               className="input-control"
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(event) => setIdentifier(event.target.value)}
               autoComplete="username"
               required
             />
