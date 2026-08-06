@@ -58,31 +58,48 @@ jobs:
           cat /tmp/pasific-preview.log
           exit 1
 
-      - name: Align E2E with teacher membership model
+      - name: Align E2E with production runtime
         run: |
           python - <<'PY'
           from pathlib import Path
 
           p = Path('scripts/production-e2e.mjs')
           s = p.read_text()
-          old = "    assert(profile.role === 'teacher' && profile.school_id, 'Teacher must be linked to a school', profile);"
-          new = """    assert(profile.role === 'teacher', 'Activated account must be a teacher', profile);
+
+          membership_old = "    assert(profile.role === 'teacher' && profile.school_id, 'Teacher must be linked to a school', profile);"
+          membership_new = """    assert(profile.role === 'teacher', 'Activated account must be a teacher', profile);
               const schoolLinks = await rest(
                 teacher,
                 `teacher_schools?teacher_id=eq.${encodeURIComponent(profile.id)}&select=school_id`,
               );
               assert(schoolLinks.ok && schoolLinks.body?.length === 1, 'Teacher must have one school membership', schoolLinks);
               profile.school_id = schoolLinks.body[0].school_id;"""
-          if old not in s:
+          if membership_old not in s:
               raise RuntimeError('Expected teacher school assertion was not found')
-          p.write_text(s.replace(old, new, 1))
+          s = s.replace(membership_old, membership_new, 1)
+
+          launch_old = "const browser = await chromium.launch({ headless: true, args: ['--disable-web-security'] });"
+          launch_new = """const browser = await chromium.launch({
+            headless: true,
+            executablePath: process.env.PLAYWRIGHT_CHROME_PATH,
+            args: ['--disable-web-security'],
+          });"""
+          if launch_old not in s:
+              raise RuntimeError('Expected Chromium launch line was not found')
+          p.write_text(s.replace(launch_old, launch_new, 1))
           PY
+
+      - name: Use system Chrome
+        run: |
+          CHROME_PATH="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            echo "No system Chrome executable was found" >&2
+            exit 1
+          fi
+          echo "PLAYWRIGHT_CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
 
       - name: Validate E2E syntax
         run: node --check scripts/production-e2e.mjs
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
 
       - name: Run production E2E
         run: node scripts/production-e2e.mjs
