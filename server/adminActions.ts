@@ -1,21 +1,35 @@
-import { createClient } from '@supabase/supabase-js';
+interface SupabaseRpcError {
+  message?: string;
+  code?: string;
+}
 
 /**
- * Hard-deletes a teacher/student account. Must go through the server (with
- * the service-role key) rather than a plain client-side `profiles` delete:
- * profiles.id references auth.users(id), not the other way round, so
- * deleting only the profiles row would leave a dangling auth.users entry
- * the person could still (confusingly) hold a session for. Deleting the
- * auth.users row cascades to profiles, teacher_permissions, teacher_schools,
- * teacher_classes and student_classes for free.
+ * Hard-deletes a teacher/student account through a SECURITY DEFINER RPC.
+ * The RPC verifies auth.uid() is an active super_admin and refuses self or
+ * super-admin deletion. The requester's access token is forwarded so the
+ * database performs authorization without a service-role key.
  */
 export async function deleteUserAccount(
   targetUserId: string,
-  deps: { supabaseUrl: string; serviceRoleKey: string },
+  requesterAuthorization: string | undefined,
+  deps: { supabaseUrl: string; anonKey: string },
 ): Promise<void> {
-  const admin = createClient(deps.supabaseUrl, deps.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
+  if (!requesterAuthorization?.startsWith('Bearer ')) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${deps.supabaseUrl}/rest/v1/rpc/admin_delete_user`, {
+    method: 'POST',
+    headers: {
+      Authorization: requesterAuthorization,
+      apikey: deps.anonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ p_user_id: targetUserId }),
   });
-  const { error } = await admin.auth.admin.deleteUser(targetUserId);
-  if (error) throw error;
+
+  if (response.ok) return;
+
+  const body = (await response.json().catch(() => ({}))) as SupabaseRpcError;
+  throw new Error(body.message ?? `Account deletion failed (${response.status})`);
 }
