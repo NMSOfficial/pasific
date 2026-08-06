@@ -2,24 +2,12 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { standardCriteria } from '../src/mock/rubric.ts';
 import { gradeSubmission, GradingError, type GradeResult } from './gemini.ts';
 import type { CriterionInput } from './gradingSchema.ts';
+import { loadSubmissionForRequester, type GradingSubmissionRow } from './submissionLookup.ts';
 
 interface SubmissionGradingDeps {
   supabaseUrl: string;
   serviceRoleKey: string;
   geminiApiKey: string;
-}
-
-interface SubmissionRow {
-  id: string;
-  assignment_id: string | null;
-  student_id: string;
-  school_id: string;
-  writing_type_id: string;
-  level: string;
-  text: string;
-  status: string;
-  submitted_at: string | null;
-  score_visible_to_student: boolean;
 }
 
 interface AssignmentRow {
@@ -61,12 +49,9 @@ function recomputeFinalScore(scores: GradeResult['criterionScores']): number {
 
 async function authorizeSubmission(
   admin: SupabaseClient,
-  authHeader: string | undefined,
-  submission: SubmissionRow,
+  token: string,
+  submission: GradingSubmissionRow,
 ): Promise<void> {
-  const token = bearerToken(authHeader);
-  if (!token) throw new SubmissionGradingError('Unauthorized', 401);
-
   const { data: authData, error: authError } = await admin.auth.getUser(token);
   const user = authData.user;
   if (authError || !user) throw new SubmissionGradingError('Unauthorized', 401);
@@ -89,13 +74,13 @@ async function authorizeSubmission(
     return;
   }
 
-  const { data: teacherSchool } = await admin
+  const { data: teacherSchool, error: teacherSchoolError } = await admin
     .from('teacher_schools')
     .select('teacher_id')
     .eq('teacher_id', user.id)
     .eq('school_id', submission.school_id)
     .maybeSingle();
-  if (!teacherSchool) throw new SubmissionGradingError('Forbidden', 403);
+  if (teacherSchoolError || !teacherSchool) throw new SubmissionGradingError('Forbidden', 403);
 }
 
 async function loadCriteria(
@@ -154,18 +139,22 @@ export async function gradeAndPersistSubmission(
   authHeader: string | undefined,
   deps: SubmissionGradingDeps,
 ): Promise<{ finalScore: number; status: string }> {
+  const token = bearerToken(authHeader);
+  if (!token) throw new SubmissionGradingError('Unauthorized', 401);
+
   const admin = createClient(deps.supabaseUrl, deps.serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data: submission, error: submissionError } = await admin
-    .from('submissions')
-    .select('id, assignment_id, student_id, school_id, writing_type_id, level, text, status, submitted_at, score_visible_to_student')
-    .eq('id', submissionId)
-    .maybeSingle<SubmissionRow>();
+  const lookup = await loadSubmissionForRequester(submissionId, token, deps);
+  if (lookup.error) {
+    console.error('[grading] requester submission lookup failed:', lookup.error);
+    throw new SubmissionGradingError('Could not read submission', 500, true);
+  }
+  const submission = lookup.submission;
+  if (!submission) throw new SubmissionGradingError('Submission not found', 404);
 
-  if (submissionError || !submission) throw new SubmissionGradingError('Submission not found', 404);
-  await authorizeSubmission(admin, authHeader, submission);
+  await authorizeSubmission(admin, token, submission);
 
   if (!submission.text.trim()) throw new SubmissionGradingError('Submission text is empty', 400);
   if (!['in_progress', 'submitted', 'analyzing', 'grading_failed'].includes(submission.status)) {
@@ -195,7 +184,10 @@ export async function gradeAndPersistSubmission(
     .from('submissions')
     .update({ status: 'analyzing', submitted_at: submission.submitted_at ?? now, last_saved_at: now })
     .eq('id', submissionId);
-  if (analyzingError) throw new SubmissionGradingError('Could not start grading', 500);
+  if (analyzingError) {
+    console.error('[grading] could not set analyzing status:', analyzingError.message);
+    throw new SubmissionGradingError('Could not start grading', 500, true);
+  }
 
   try {
     const result = await gradeSubmission(
