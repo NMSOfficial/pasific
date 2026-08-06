@@ -26,10 +26,10 @@ jobs:
       TEST_PASSWORD: PasificE2E2026!
       ADMIN_USERNAME: e2e-admin-260806
       TEACHER_USERNAME: e2e-teacher-260806
-      STUDENT_CODE: E2E-STUDENT2-260806
-      STUDENT_USERNAME: e2e-student2-260806
-      OUTSIDER_CODE: E2E-OUTSIDE2-260806
-      OUTSIDER_USERNAME: e2e-outsider2-260806
+      STUDENT_CODE: E2E-STUDENT3-260806
+      STUDENT_USERNAME: e2e-student3-260806
+      OUTSIDER_CODE: E2E-OUTSIDE3-260806
+      OUTSIDER_USERNAME: e2e-outsider3-260806
     steps:
       - name: Checkout
         uses: actions/checkout@v4
