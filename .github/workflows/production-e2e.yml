@@ -30,6 +30,7 @@ jobs:
       STUDENT_USERNAME: e2e-student3-260806
       OUTSIDER_CODE: E2E-OUTSIDE3-260806
       OUTSIDER_USERNAME: e2e-outsider3-260806
+      FINAL_RUN: atomic-permissions
     steps:
       - name: Checkout
         uses: actions/checkout@v4
