@@ -16,7 +16,7 @@ const EN_LOCALE: Record<string, unknown> = JSON.parse(
   readFileSync(join(__dirname, '..', 'src', 'i18n', 'locales', 'en.json'), 'utf-8'),
 );
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const REQUEST_TIMEOUT_MS = 45_000;
 const RETRY_DELAY_MS = 1_500;
@@ -179,9 +179,8 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
         contents: [{ role: 'user', parts: [{ text: userContent }] }],
         systemInstruction: { parts: [{ text: systemInstruction }] },
         generationConfig: {
-          temperature: 0.2,
           maxOutputTokens: 4096,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: { thinkingLevel: 'minimal' },
           responseMimeType: 'application/json',
           responseSchema: MODEL_OUTPUT_SCHEMA,
         },
