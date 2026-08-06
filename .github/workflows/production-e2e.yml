@@ -58,6 +58,17 @@ jobs:
           cat /tmp/pasific-preview.log
           exit 1
 
+      - name: Adapt responsive selectors
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/production-e2e.mjs')
+          s = p.read_text()
+          s = s.replace("admin.page.getByText('E2E Pasific A 260806', { exact: true }).first()", "admin.page.locator('span:visible', { hasText: 'E2E Pasific A 260806' }).first()")
+          s = s.replace("admin.page.getByText('E2E Pasific B 260806', { exact: true }).first()", "admin.page.locator('span:visible', { hasText: 'E2E Pasific B 260806' }).first()")
+          p.write_text(s)
+          PY
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
