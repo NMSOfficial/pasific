@@ -16,9 +16,10 @@ const EN_LOCALE: Record<string, unknown> = JSON.parse(
   readFileSync(join(__dirname, '..', 'src', 'i18n', 'locales', 'en.json'), 'utf-8'),
 );
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite';
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemma-4-31b-it';
+const IS_GEMMA_MODEL = GEMINI_MODEL.toLowerCase().startsWith('gemma-');
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const REQUEST_TIMEOUT_MS = 45_000;
+const REQUEST_TIMEOUT_MS = IS_GEMMA_MODEL ? 90_000 : 45_000;
 const RETRY_DELAY_MS = 1_500;
 
 const CATEGORY_IDS = new Set(ERROR_CATEGORIES.map((c) => c.id));
@@ -171,20 +172,25 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
+    const combinedUserContent = IS_GEMMA_MODEL
+      ? `${systemInstruction}\n\n${userContent}`
+      : userContent;
+    const requestBody = {
+      contents: [{ role: 'user', parts: [{ text: combinedUserContent }] }],
+      ...(IS_GEMMA_MODEL ? {} : { systemInstruction: { parts: [{ text: systemInstruction }] } }),
+      generationConfig: {
+        maxOutputTokens: 4096,
+        ...(IS_GEMMA_MODEL ? {} : { thinkingConfig: { thinkingLevel: 'minimal' } }),
+        responseMimeType: 'application/json',
+        responseSchema: MODEL_OUTPUT_SCHEMA,
+      },
+    };
+
     const res = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: userContent }] }],
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: {
-          maxOutputTokens: 4096,
-          thinkingConfig: { thinkingLevel: 'minimal' },
-          responseMimeType: 'application/json',
-          responseSchema: MODEL_OUTPUT_SCHEMA,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (res.status === 429 || res.status === 503) {
