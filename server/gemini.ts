@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { ZodError } from 'zod';
 import { ERROR_CATEGORIES } from '../src/mock/errorCategories.ts';
 import {
   modelOutputSchema,
@@ -17,7 +18,8 @@ const EN_LOCALE: Record<string, unknown> = JSON.parse(
 
 const GEMINI_MODEL = 'gemma-4-31b-it';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const REQUEST_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 60_000;
+const RETRY_DELAY_MS = 1_500;
 
 const CATEGORY_IDS = new Set(ERROR_CATEGORIES.map((c) => c.id));
 
@@ -115,6 +117,10 @@ ${input.text}
   return { systemInstruction, userContent };
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGemini(systemInstruction: string, userContent: string, apiKey: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -150,6 +156,14 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
       throw new GradingError('Gemini returned an empty response', true);
     }
     return text;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new GradingError(`Gemini request timed out after ${REQUEST_TIMEOUT_MS}ms`, true);
+    }
+    if (error instanceof TypeError) {
+      throw new GradingError('Gemini network request failed', true);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -224,8 +238,6 @@ function resolveAnnotations(output: ModelOutput, essayText: string): GradedAnnot
         droppedCount += 1;
         return;
       }
-      // Best-effort: fall back to locating the normalized quote length in the original text
-      // starting from the same relative position; if that substring round-trips, use it.
       const candidate = essayText.slice(normalizedStart, normalizedStart + a.quotedText.length);
       if (normalizeForMatch(candidate) !== normalizedQuote) {
         droppedCount += 1;
@@ -261,8 +273,18 @@ async function requestGrading(input: GradeRequest, apiKey: string, attempt: numb
       : `${systemInstruction}\n\nIMPORTANT: your previous response was invalid. Return ONLY the raw JSON object described above, with no markdown fences and no extra text.`;
 
   const raw = await callGemini(effectiveSystemInstruction, userContent, apiKey);
-  const parsed = parseModelJson(raw);
-  const output = modelOutputSchema.parse(parsed);
+
+  let output: ModelOutput;
+  try {
+    const parsed = parseModelJson(raw);
+    output = modelOutputSchema.parse(parsed);
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof ZodError) {
+      throw new GradingError('Gemini returned invalid structured output', true);
+    }
+    throw error;
+  }
+
   validateModelOutput(output, input.criteria);
 
   return {
@@ -274,9 +296,9 @@ async function requestGrading(input: GradeRequest, apiKey: string, attempt: numb
 export async function gradeSubmission(input: GradeRequest, apiKey: string, levelDescriptor?: string): Promise<GradeResult> {
   try {
     return await requestGrading(input, apiKey, 0, levelDescriptor);
-  } catch (err) {
-    const retryable = err instanceof GradingError ? err.retryable : err instanceof SyntaxError;
-    if (!retryable) throw err;
+  } catch (error) {
+    if (!(error instanceof GradingError) || !error.retryable) throw error;
+    await wait(RETRY_DELAY_MS);
     return await requestGrading(input, apiKey, 1, levelDescriptor);
   }
 }
