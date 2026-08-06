@@ -1,0 +1,77 @@
+name: Production E2E
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: focused-production-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      APP_ORIGIN: http://127.0.0.1:4173
+      VERCEL_SHARE_URL: http://127.0.0.1:4173
+      SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
+      API_URL: https://pasific-production.up.railway.app
+      VITE_SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_J5SdVbH0rWmJHBOqTahwdg_bkrYRDhT
+      VITE_API_URL: https://pasific-production.up.railway.app
+      TEACHER_CODE: E2E-TEACH4-260806
+      TEACHER_USERNAME: e2e-teacher4-260806
+      STUDENT_CODE: E2E-STUDENT4-260806
+      STUDENT_USERNAME: e2e-student4-260806
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Generate ephemeral password
+        run: echo "TEST_PASSWORD=$(openssl rand -hex 18)Aa1" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start frontend preview
+        run: |
+          nohup npm exec vite -- preview --host 127.0.0.1 --port 4173 >/tmp/pasific-preview.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/pasific-preview.log
+          exit 1
+
+      - name: Validate E2E syntax
+        run: node --check scripts/production-e2e.mjs
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run production E2E
+        run: node scripts/production-e2e.mjs
+
+      - name: Upload production E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-production-e2e-report
+          path: test-results/production-e2e
+          if-no-files-found: warn
+          retention-days: 7
