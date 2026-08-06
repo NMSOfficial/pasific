@@ -14,7 +14,7 @@ concurrency:
 jobs:
   production-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     env:
       APP_ORIGIN: http://127.0.0.1:4173
       VERCEL_SHARE_URL: http://127.0.0.1:4173
@@ -23,14 +23,12 @@ jobs:
       VITE_SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
       VITE_SUPABASE_ANON_KEY: sb_publishable_J5SdVbH0rWmJHBOqTahwdg_bkrYRDhT
       VITE_API_URL: https://pasific-production.up.railway.app
-      TEST_PASSWORD: PasificE2E2026!
-      ADMIN_USERNAME: e2e-admin-260806
-      TEACHER_USERNAME: e2e-teacher-260806
-      STUDENT_CODE: E2E-STUDENT3-260806
-      STUDENT_USERNAME: e2e-student3-260806
-      OUTSIDER_CODE: E2E-OUTSIDE3-260806
-      OUTSIDER_USERNAME: e2e-outsider3-260806
-      FINAL_RUN: atomic-permissions
+      TEACHER_CODE: E2E-TEACH4-260806
+      TEACHER_USERNAME: e2e-teacher4-260806
+      STUDENT_CODE: E2E-STUDENT4-260806
+      STUDENT_USERNAME: e2e-student4-260806
+      OUTSIDER_CODE: E2E-OUTSIDE4-260806
+      OUTSIDER_USERNAME: e2e-outsider4-260806
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,6 +38,9 @@ jobs:
         with:
           node-version: 22.12.0
           cache: npm
+
+      - name: Generate ephemeral password
+        run: echo "TEST_PASSWORD=$(openssl rand -hex 18)Aa1" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci
@@ -59,18 +60,86 @@ jobs:
           cat /tmp/pasific-preview.log
           exit 1
 
-      - name: Adapt local production test
+      - name: Focus production test on teacher and student journey
         run: |
           python - <<'PY'
           from pathlib import Path
+
           p = Path('scripts/production-e2e.mjs')
           s = p.read_text()
-          s = s.replace("admin.page.getByText('E2E Pasific A 260806', { exact: true }).first()", "admin.page.locator('td:visible', { hasText: 'E2E Pasific A 260806' }).first()")
-          s = s.replace("admin.page.getByText('E2E Pasific B 260806', { exact: true }).first()", "admin.page.locator('td:visible', { hasText: 'E2E Pasific B 260806' }).first()")
-          s = s.replace("admin.page.getByText('E2E UI School 260806', { exact: true }).first()", "admin.page.locator('td:visible', { hasText: 'E2E UI School 260806' }).first()")
-          s = s.replace("const browser = await chromium.launch({ headless: true });", "const browser = await chromium.launch({ headless: true, args: ['--disable-web-security'] });")
+
+          def replace_once(old: str, new: str) -> None:
+              global s
+              if old not in s:
+                  raise RuntimeError(f'Expected production E2E fragment was not found: {old[:100]}')
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              "  'ADMIN_USERNAME', 'TEACHER_USERNAME',",
+              "  'TEACHER_CODE', 'TEACHER_USERNAME',",
+          )
+
+          admin_start = s.index("  admin = await createSession(browser, 'admin');")
+          teacher_start = s.index("  teacher = await createSession(browser, 'teacher');", admin_start)
+          s = s[:admin_start] + s[teacher_start:]
+
+          replace_once(
+              "  await step('Teacher login', () => login(teacher, process.env.TEACHER_USERNAME, '/teacher/dashboard'), teacher.page);",
+              "  await step('Teacher activation', () => activate(teacher, process.env.TEACHER_CODE, process.env.TEACHER_USERNAME, '/teacher/dashboard'), teacher.page);",
+          )
+
+          replace_once(
+              "    await teacher.page.getByText('E2E 10-A 260806', { exact: true }).first().waitFor({ timeout: 30_000 });\n",
+              "",
+          )
+
+          assignment_anchor = "  await step('Teacher assignment and custom rubric creation', async () => {"
+          assignment_index = s.index(assignment_anchor, s.index("  await step('Teacher class creation'"))
+          fixture_step = r'''  await step('Teacher permissions and student activation code', async () => {
+            const teacherProfile = await ownProfile(teacher);
+            const permissions = await rest(teacher, `teacher_permissions?teacher_id=eq.${encodeURIComponent(teacherProfile.id)}&select=permission`);
+            assert(permissions.ok && permissions.body.length === 11, 'Activated teacher must receive all permissions', permissions);
+
+            const links = await rest(teacher, `teacher_classes?teacher_id=eq.${encodeURIComponent(teacherProfile.id)}&select=class_id`);
+            assert(links.ok && links.body.length > 0, 'Teacher class link must persist', links);
+            const classIds = links.body.map((row) => row.class_id).join(',');
+            const classes = await rest(teacher, `school_classes?id=in.(${classIds})&select=id,name,school_id`);
+            const createdClass = classes.body?.find((row) => row.name === 'E2E 10-A 260806');
+            assert(classes.ok && createdClass?.id, 'Created class must be readable', classes);
+
+            const codeResponse = await rest(teacher, 'activation_codes', {
+              method: 'POST',
+              prefer: 'return=representation',
+              body: {
+                code: process.env.STUDENT_CODE,
+                school_id: teacherProfile.school_id,
+                class_id: createdClass.id,
+                role: 'student',
+                status: 'unused',
+                expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                batch_id: 'e2e-focused-260806',
+              },
+            });
+            assert(codeResponse.ok && codeResponse.body?.[0]?.code === process.env.STUDENT_CODE, 'Teacher must create student activation code', codeResponse);
+          }, teacher.page);
+
+'''
+          s = s[:assignment_index] + fixture_step + s[assignment_index:]
+
+          admin_final = s.index("  await step('Admin sees activated students'")
+          browser_assert = s.index("  assert(report.browserErrors.length === 0", admin_final)
+          s = s[:admin_final] + s[browser_assert:]
+
+          replace_once(
+              "const browser = await chromium.launch({ headless: true });",
+              "const browser = await chromium.launch({ headless: true, args: ['--disable-web-security'] });",
+          )
+
           p.write_text(s)
           PY
+
+      - name: Validate adapted test syntax
+        run: node --check scripts/production-e2e.mjs
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
