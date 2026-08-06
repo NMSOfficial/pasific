@@ -7,7 +7,8 @@ import { PageHeader } from '../../components/PageHeader';
 import { EmptyState } from '../../components/EmptyState';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { ConfirmationDialog } from '../../components/ConfirmationDialog';
-import { fetchTeachers, updateTeacherPermissions, setAccountStatus, createActivationCodeBatch, fetchSchools, type TeacherRow, type SchoolSummary } from '../../services/adminData';
+import { fetchTeachers, setAccountStatus, createActivationCodeBatch, fetchSchools, type TeacherRow, type SchoolSummary } from '../../services/adminData';
+import { replaceTeacherPermissions } from '../../services/teacherPermissionData';
 import { deleteUserAccount } from '../../services/adminActionsClient';
 
 const ALL_PERMISSIONS: TeacherPermissionKey[] = [
@@ -29,6 +30,8 @@ export function AdminTeachersPage() {
   const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftPermissions, setDraftPermissions] = useState<TeacherPermissionKey[]>([]);
+  const [savingPermissions, setSavingPermissions] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeacherRow | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -47,6 +50,7 @@ export function AdminTeachersPage() {
   const startEdit = (teacherId: string) => {
     const tch = teachers?.find((x) => x.id === teacherId);
     setDraftPermissions(tch?.permissions ?? []);
+    setPermissionError(null);
     setEditingId(teacherId);
   };
 
@@ -55,11 +59,18 @@ export function AdminTeachersPage() {
   };
 
   const savePermissions = async () => {
-    if (editingId) {
-      await updateTeacherPermissions(editingId, draftPermissions, { id: admin.id, displayName: admin.displayName });
+    if (!editingId || savingPermissions) return;
+    setSavingPermissions(true);
+    setPermissionError(null);
+    try {
+      await replaceTeacherPermissions(editingId, draftPermissions);
       reload();
+      setEditingId(null);
+    } catch {
+      setPermissionError(t('states.error.generic'));
+    } finally {
+      setSavingPermissions(false);
     }
-    setEditingId(null);
   };
 
   const handleGenerateInvite = async () => {
@@ -135,13 +146,14 @@ export function AdminTeachersPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-2)' }}>
                   {ALL_PERMISSIONS.map((p) => (
                     <label key={p} className="checkbox-row">
-                      <input type="checkbox" checked={draftPermissions.includes(p)} onChange={() => togglePermission(p)} />
+                      <input type="checkbox" checked={draftPermissions.includes(p)} onChange={() => togglePermission(p)} disabled={savingPermissions} />
                       <span style={{ fontSize: 'var(--text-xs)' }}>{p}</span>
                     </label>
                   ))}
+                  {permissionError && <p className="field__error" role="alert">{permissionError}</p>}
                   <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-                    <button type="button" className="btn btn--secondary btn--sm" onClick={() => setEditingId(null)}>{t('common.cancel')}</button>
-                    <button type="button" className="btn btn--primary btn--sm" onClick={savePermissions}>{t('common.save')}</button>
+                    <button type="button" className="btn btn--secondary btn--sm" onClick={() => setEditingId(null)} disabled={savingPermissions}>{t('common.cancel')}</button>
+                    <button type="button" className="btn btn--primary btn--sm" onClick={savePermissions} disabled={savingPermissions}>{t('common.save')}</button>
                   </div>
                 </div>
               ) : (
