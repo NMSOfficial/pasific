@@ -8,7 +8,7 @@ import { gradeAndPersistSubmission, SubmissionGradingError } from './submissionG
 try {
   process.loadEnvFile();
 } catch {
-  // Railway/Vercel provide runtime variables; a local .env is optional.
+  // Hosted environments inject runtime variables; a local .env is optional.
 }
 
 const PORT = Number(process.env.PORT ?? 8787);
