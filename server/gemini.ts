@@ -23,23 +23,21 @@ const RETRY_DELAY_MS = 1_500;
 
 const CATEGORY_IDS = new Set(ERROR_CATEGORIES.map((c) => c.id));
 
-const MODEL_OUTPUT_JSON_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
+const MODEL_OUTPUT_SCHEMA = {
+  type: 'OBJECT',
   properties: {
     criterionScores: {
-      type: 'array',
+      type: 'ARRAY',
       minItems: 1,
       items: {
-        type: 'object',
-        additionalProperties: false,
+        type: 'OBJECT',
         properties: {
-          criterionId: { type: 'string' },
-          score: { type: 'integer' },
-          explanation: { type: 'string' },
-          evidenceQuote: { type: 'string' },
-          strongAspects: { type: 'array', items: { type: 'string' } },
-          developmentAreas: { type: 'array', items: { type: 'string' } },
+          criterionId: { type: 'STRING' },
+          score: { type: 'INTEGER' },
+          explanation: { type: 'STRING' },
+          evidenceQuote: { type: 'STRING' },
+          strongAspects: { type: 'ARRAY', items: { type: 'STRING' } },
+          developmentAreas: { type: 'ARRAY', items: { type: 'STRING' } },
         },
         required: [
           'criterionId',
@@ -51,23 +49,22 @@ const MODEL_OUTPUT_JSON_SCHEMA = {
       },
     },
     annotations: {
-      type: 'array',
+      type: 'ARRAY',
       items: {
-        type: 'object',
-        additionalProperties: false,
+        type: 'OBJECT',
         properties: {
-          quotedText: { type: 'string' },
+          quotedText: { type: 'STRING' },
           severity: {
-            type: 'string',
+            type: 'STRING',
             enum: ['critical', 'mistake', 'inaccuracy', 'info'],
           },
           categoryId: {
-            type: 'string',
+            type: 'STRING',
             enum: ERROR_CATEGORIES.map((category) => category.id),
           },
-          explanation: { type: 'string' },
-          hint: { type: 'string' },
-          suggestedCorrection: { type: 'string' },
+          explanation: { type: 'STRING' },
+          hint: { type: 'STRING' },
+          suggestedCorrection: { type: 'STRING' },
         },
         required: ['quotedText', 'severity', 'categoryId', 'explanation'],
       },
@@ -185,12 +182,8 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
           temperature: 0.2,
           maxOutputTokens: 4096,
           thinkingConfig: { thinkingBudget: 0 },
-          responseFormat: {
-            text: {
-              mimeType: 'application/json',
-              schema: MODEL_OUTPUT_JSON_SCHEMA,
-            },
-          },
+          responseMimeType: 'application/json',
+          responseSchema: MODEL_OUTPUT_SCHEMA,
         },
       }),
     });
