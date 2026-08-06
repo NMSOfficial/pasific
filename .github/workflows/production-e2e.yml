@@ -16,10 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      APP_ORIGIN: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app
-      VERCEL_SHARE_URL: https://pasific-dv3sxtxyp-nmsofficials-projects.vercel.app/?_vercel_share=Fb11Yw8HVBL0gJ4VIYmDGIKoaiXPFV1G
+      APP_ORIGIN: http://127.0.0.1:4173
+      VERCEL_SHARE_URL: http://127.0.0.1:4173
       SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
       API_URL: https://pasific-production.up.railway.app
+      VITE_SUPABASE_URL: https://pklaxnjngjkonjwgbtxx.supabase.co
+      VITE_SUPABASE_ANON_KEY: sb_publishable_J5SdVbH0rWmJHBOqTahwdg_bkrYRDhT
+      VITE_API_URL: https://pasific-production.up.railway.app
       TEST_PASSWORD: PasificE2E2026!
       ADMIN_USERNAME: e2e-admin-260806
       TEACHER_USERNAME: e2e-teacher-260806
@@ -39,6 +42,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start frontend preview
+        run: |
+          nohup npm exec vite -- preview --host 127.0.0.1 --port 4173 >/tmp/pasific-preview.log 2>&1 &
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/pasific-preview.log
+          exit 1
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
