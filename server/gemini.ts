@@ -16,12 +16,65 @@ const EN_LOCALE: Record<string, unknown> = JSON.parse(
   readFileSync(join(__dirname, '..', 'src', 'i18n', 'locales', 'en.json'), 'utf-8'),
 );
 
-const GEMINI_MODEL = 'gemma-4-31b-it';
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash-lite';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const REQUEST_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 45_000;
 const RETRY_DELAY_MS = 1_500;
 
 const CATEGORY_IDS = new Set(ERROR_CATEGORIES.map((c) => c.id));
+
+const MODEL_OUTPUT_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    criterionScores: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          criterionId: { type: 'string' },
+          score: { type: 'integer' },
+          explanation: { type: 'string' },
+          evidenceQuote: { type: 'string' },
+          strongAspects: { type: 'array', items: { type: 'string' } },
+          developmentAreas: { type: 'array', items: { type: 'string' } },
+        },
+        required: [
+          'criterionId',
+          'score',
+          'explanation',
+          'strongAspects',
+          'developmentAreas',
+        ],
+      },
+    },
+    annotations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          quotedText: { type: 'string' },
+          severity: {
+            type: 'string',
+            enum: ['critical', 'mistake', 'inaccuracy', 'info'],
+          },
+          categoryId: {
+            type: 'string',
+            enum: ERROR_CATEGORIES.map((category) => category.id),
+          },
+          explanation: { type: 'string' },
+          hint: { type: 'string' },
+          suggestedCorrection: { type: 'string' },
+        },
+        required: ['quotedText', 'severity', 'categoryId', 'explanation'],
+      },
+    },
+  },
+  required: ['criterionScores', 'annotations'],
+} as const;
 
 export interface GradedCriterionScore {
   criterionId: string;
@@ -88,16 +141,12 @@ function buildPrompt(input: GradeRequest, levelDescriptor?: string): { systemIns
 
   const systemInstruction = `You are an expert CEFR-aligned English writing assessor for an EFL education platform. You grade a student's essay against a weighted rubric and flag concrete errors.
 
-Return ONLY a single JSON object — no markdown code fences, no commentary before or after — matching exactly this shape:
-{
-  "criterionScores": [ { "criterionId": string, "score": number, "explanation": string, "evidenceQuote": string, "strongAspects": string[], "developmentAreas": string[] } ],
-  "annotations": [ { "quotedText": string, "severity": "critical"|"mistake"|"inaccuracy"|"info", "categoryId": string, "explanation": string, "hint": string, "suggestedCorrection": string } ]
-}
+Return a single JSON object matching the supplied response schema.
 
 Rules:
 - Include exactly one entry in criterionScores for every criterion id listed below, no more, no fewer.
 - score must be an integer from 0 to that criterion's maxScore.
-- evidenceQuote and quotedText, when included, MUST be copied verbatim (character-for-character, same spelling/punctuation) from the essay text — never paraphrase or summarize them. Omit the field entirely if you cannot quote exactly.
+- evidenceQuote and quotedText, when included, MUST be copied verbatim (character-for-character, same spelling/punctuation) from the essay text — never paraphrase or summarize them. Omit the optional field if you cannot quote exactly.
 - categoryId must be exactly one of: ${categoryLines}.
 - Severity guide: "critical" seriously impedes meaning or breaks an essential task requirement; "mistake" is a clear error but meaning stays clear; "inaccuracy" is a smaller issue that doesn't prevent understanding; "info" is an optional stylistic suggestion, not an error.
 - Write every explanation, hint, strongAspects and developmentAreas entry in English, in a constructive teacher's tone.
@@ -132,7 +181,17 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: userContent }] }],
         systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: { temperature: 0.3, maxOutputTokens: 4096 },
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 4096,
+          thinkingConfig: { thinkingBudget: 0 },
+          responseFormat: {
+            text: {
+              mimeType: 'application/json',
+              schema: MODEL_OUTPUT_JSON_SCHEMA,
+            },
+          },
+        },
       }),
     });
 
@@ -270,7 +329,7 @@ async function requestGrading(input: GradeRequest, apiKey: string, attempt: numb
   const effectiveSystemInstruction =
     attempt === 0
       ? systemInstruction
-      : `${systemInstruction}\n\nIMPORTANT: your previous response was invalid. Return ONLY the raw JSON object described above, with no markdown fences and no extra text.`;
+      : `${systemInstruction}\n\nIMPORTANT: your previous response did not satisfy the required schema. Return only a schema-compliant result.`;
 
   const raw = await callGemini(effectiveSystemInstruction, userContent, apiKey);
 
