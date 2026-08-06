@@ -86,7 +86,14 @@ jobs:
           });"""
           if launch_old not in s:
               raise RuntimeError('Expected Chromium launch line was not found')
-          p.write_text(s.replace(launch_old, launch_new, 1))
+          s = s.replace(launch_old, launch_new, 1)
+
+          feedback_old = "    await student.page.getByText(FEEDBACK, { exact: true }).waitFor({ timeout: 30_000 });"
+          feedback_new = """    await student.page.getByText('Öğretmen Geri Bildirimi', { exact: true }).click();
+              await student.page.getByText(FEEDBACK, { exact: true }).waitFor({ timeout: 30_000 });"""
+          if feedback_old not in s:
+              raise RuntimeError('Expected student feedback assertion was not found')
+          p.write_text(s.replace(feedback_old, feedback_new, 1))
           PY
 
       - name: Use system Chrome
