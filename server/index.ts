@@ -21,6 +21,56 @@ const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
 const APP_ORIGIN = process.env.APP_ORIGIN;
 const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '').split(',').map((value) => value.trim()).filter(Boolean);
 
+// DIAGNOSTIC: Key metadata (no secrets printed)
+if (SUPABASE_SERVICE_ROLE_KEY) {
+  const trimmed = SUPABASE_SERVICE_ROLE_KEY.trim();
+  const hasLeadingSpace = SUPABASE_SERVICE_ROLE_KEY !== trimmed;
+  const hasQuotes = SUPABASE_SERVICE_ROLE_KEY.startsWith('"') || SUPABASE_SERVICE_ROLE_KEY.startsWith("'");
+  const dotCount = trimmed.split('.').length - 1;
+  let keyFamily = 'unknown';
+  let jwtPayload: any = null;
+  
+  if (trimmed.startsWith('eyJ')) {
+    keyFamily = 'legacy_jwt';
+    try {
+      const parts = trimmed.split('.');
+      if (parts.length === 3) {
+        jwtPayload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+      }
+    } catch {}
+  } else if (trimmed.startsWith('sb_secret_')) {
+    keyFamily = 'sb_secret';
+  } else if (trimmed.startsWith('sb_publishable_')) {
+    keyFamily = 'sb_publishable';
+  }
+  
+  console.log(`[diagnostic] SUPABASE_SERVICE_ROLE_KEY metadata:`);
+  console.log(`  - Length (trimmed): ${trimmed.length}`);
+  console.log(`  - Family: ${keyFamily}`);
+  console.log(`  - Dot count: ${dotCount}`);
+  console.log(`  - Has leading/trailing space: ${hasLeadingSpace}`);
+  console.log(`  - Wrapped in quotes: ${hasQuotes}`);
+  if (jwtPayload) {
+    console.log(`  - JWT role: ${jwtPayload.role || 'N/A'}`);
+    console.log(`  - JWT project_ref: ${jwtPayload.sub || 'N/A'}`);
+  }
+  console.log(`  - Configured SUPABASE_URL: ${SUPABASE_URL}`);
+  
+  // Test REST API access with the (possibly trimmed/unquoted) key
+  (async () => {
+    try {
+      const testKey = hasQuotes ? trimmed.slice(1, -1) : trimmed;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+        method: 'GET',
+        headers: { apikey: testKey },
+      });
+      console.log(`  - REST API health check status: ${res.status}`);
+    } catch (err) {
+      console.log(`  - REST API health check failed: ${(err as Error).message}`);
+    }
+  })();
+}
+
 if (!GEMINI_API_KEY) console.warn('[server] GEMINI_API_KEY is not configured');
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) console.warn('[server] Supabase public configuration is incomplete');
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] SUPABASE_SERVICE_ROLE_KEY is not configured');
@@ -234,3 +284,4 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 app.listen(PORT, () => {
   console.log(`[server] listening on http://localhost:${PORT}`);
 });
+
