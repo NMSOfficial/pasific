@@ -1,0 +1,43 @@
+name: CORS Smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cors-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify admin delete preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          headers="$(curl --fail-with-body --silent --show-error --dump-header - --output /dev/null \
+            -X OPTIONS \
+            -H 'Origin: https://pasific.vercel.app' \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: authorization,content-type' \
+            https://pasific-production.up.railway.app/api/admin/delete-user)"
+          printf '%s\n' "$headers"
+          grep -Eqi '^HTTP/.* 204' <<<"$headers"
+          grep -Eqi '^access-control-allow-origin: https://pasific\.vercel\.app\r?$' <<<"$headers"
+          grep -Eqi '^access-control-allow-methods: .*POST' <<<"$headers"
+          grep -Eqi '^access-control-allow-headers: .*Authorization' <<<"$headers"
+
+      - name: Verify CORS on rejected POST
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --silent --show-error --dump-header - \
+            -X POST \
+            -H 'Origin: https://pasific.vercel.app' \
+            -H 'Content-Type: application/json' \
+            --data '{"userId":"00000000-0000-0000-0000-000000000000"}' \
+            https://pasific-production.up.railway.app/api/admin/delete-user)"
+          printf '%s\n' "$response"
+          grep -Eqi '^HTTP/.* 403' <<<"$response"
+          grep -Eqi '^access-control-allow-origin: https://pasific\.vercel\.app\r?$' <<<"$response"
