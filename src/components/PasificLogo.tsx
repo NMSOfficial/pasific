@@ -9,6 +9,7 @@ const LOGO_ASPECT_RATIO = 4;
 
 export function PasificLogo({ size = 'md', variant = 'full', className }: PasificLogoProps) {
   const px = SIZES[size];
+  const onDark = className?.split(/\s+/).includes('pasific-logo--on-dark') ?? false;
 
   return (
     <span
@@ -24,6 +25,7 @@ export function PasificLogo({ size = 'md', variant = 'full', className }: Pasifi
             width: px * LOGO_ASPECT_RATIO,
             height: px,
             objectFit: 'contain',
+            filter: onDark ? 'brightness(0) invert(1)' : undefined,
           }}
         />
       ) : (

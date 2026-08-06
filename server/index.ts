@@ -214,7 +214,7 @@ app.post('/api/auth/request-password-reset', passwordResetLimiter, async (req, r
 const deleteUserRequestSchema = z.object({ userId: z.string().uuid() });
 
 app.post('/api/admin/delete-user', adminActionLimiter, async (req, res) => {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     res.status(503).json({ error: 'Not configured on the server' });
     return;
   }
@@ -236,13 +236,28 @@ app.post('/api/admin/delete-user', adminActionLimiter, async (req, res) => {
   }
 
   try {
-    await deleteUserAccount(body.userId, {
+    await deleteUserAccount(body.userId, req.headers.authorization, {
       supabaseUrl: SUPABASE_URL,
-      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      anonKey: SUPABASE_ANON_KEY,
     });
     res.json({ ok: true });
   } catch (error) {
-    console.error('[admin] failed to delete user:', error);
+    const message = error instanceof Error ? error.message : 'Failed to delete account';
+    console.error('[admin] failed to delete user:', message);
+
+    if (message === 'Forbidden') {
+      res.status(403).json({ error: message });
+      return;
+    }
+    if (message === 'User not found') {
+      res.status(404).json({ error: message });
+      return;
+    }
+    if (message === 'You cannot delete your own account' || message === 'Only teacher or student accounts can be deleted') {
+      res.status(400).json({ error: message });
+      return;
+    }
+
     res.status(502).json({ error: 'Failed to delete account' });
   }
 });
