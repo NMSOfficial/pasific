@@ -20,7 +20,18 @@ const GRADING_SERVER_SECRET = process.env.GRADING_SERVER_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
 const APP_ORIGIN = process.env.APP_ORIGIN;
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+const ALLOWED_ORIGINS = new Set(
+  [
+    ...(process.env.CORS_ORIGIN ?? '').split(','),
+    APP_ORIGIN ?? '',
+    'https://pasific.vercel.app',
+    'https://pasific-nmsofficials-projects.vercel.app',
+    'https://pasific-git-main-nmsofficials-projects.vercel.app',
+  ]
+    .map((value) => value.trim().replace(/\/$/, ''))
+    .filter(Boolean),
+);
+const PASIFIC_VERCEL_ORIGIN = /^https:\/\/pasific(?:-[a-z0-9-]+)?\.vercel\.app$/i;
 
 if (!GEMINI_API_KEY) console.warn('[server] GEMINI_API_KEY is not configured');
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) console.warn('[server] Supabase public configuration is incomplete');
@@ -72,14 +83,21 @@ const adminActionLimiter = rateLimit({
   message: { error: 'Too many admin actions. Please wait a few minutes and try again.' },
 });
 
+function isAllowedOrigin(origin: string): boolean {
+  const normalized = origin.replace(/\/$/, '');
+  return ALLOWED_ORIGINS.has(normalized) || PASIFIC_VERCEL_ORIGIN.test(normalized);
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
     return;
