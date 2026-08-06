@@ -15,7 +15,14 @@ export interface GradingSubmissionRow {
 
 interface LookupDeps {
   supabaseUrl: string;
-  serviceRoleKey: string;
+  anonKey: string;
+}
+
+export function createRequesterClient(token: string, deps: LookupDeps): SupabaseClient {
+  return createClient(deps.supabaseUrl, deps.anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
 }
 
 export async function loadSubmissionForRequester(
@@ -23,10 +30,7 @@ export async function loadSubmissionForRequester(
   token: string,
   deps: LookupDeps,
 ): Promise<{ submission: GradingSubmissionRow | null; error: string | null }> {
-  const requester: SupabaseClient = createClient(deps.supabaseUrl, deps.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
+  const requester = createRequesterClient(token, deps);
 
   const { data, error } = await requester
     .from('submissions')
