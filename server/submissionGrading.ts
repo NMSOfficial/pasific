@@ -1,12 +1,17 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { standardCriteria } from '../src/mock/rubric.ts';
 import { gradeSubmission, GradingError, type GradeResult } from './gemini.ts';
 import type { CriterionInput } from './gradingSchema.ts';
-import { loadSubmissionForRequester, type GradingSubmissionRow } from './submissionLookup.ts';
+import {
+  createRequesterClient,
+  loadSubmissionForRequester,
+  type GradingSubmissionRow,
+} from './submissionLookup.ts';
 
 interface SubmissionGradingDeps {
   supabaseUrl: string;
-  serviceRoleKey: string;
+  anonKey: string;
+  gradingServerSecret: string;
   geminiApiKey: string;
 }
 
@@ -48,15 +53,15 @@ function recomputeFinalScore(scores: GradeResult['criterionScores']): number {
 }
 
 async function authorizeSubmission(
-  admin: SupabaseClient,
+  requester: SupabaseClient,
   token: string,
   submission: GradingSubmissionRow,
 ): Promise<void> {
-  const { data: authData, error: authError } = await admin.auth.getUser(token);
+  const { data: authData, error: authError } = await requester.auth.getUser(token);
   const user = authData.user;
   if (authError || !user) throw new SubmissionGradingError('Unauthorized', 401);
 
-  const { data: profile, error: profileError } = await admin
+  const { data: profile, error: profileError } = await requester
     .from('profiles')
     .select('role, status, expires_at')
     .eq('id', user.id)
@@ -74,7 +79,7 @@ async function authorizeSubmission(
     return;
   }
 
-  const { data: teacherSchool, error: teacherSchoolError } = await admin
+  const { data: teacherSchool, error: teacherSchoolError } = await requester
     .from('teacher_schools')
     .select('teacher_id')
     .eq('teacher_id', user.id)
@@ -84,7 +89,7 @@ async function authorizeSubmission(
 }
 
 async function loadCriteria(
-  admin: SupabaseClient,
+  requester: SupabaseClient,
   assignment: AssignmentRow | null,
 ): Promise<{ criteria: CriterionInput[]; usesCustomRubric: boolean }> {
   if (!assignment) {
@@ -100,18 +105,18 @@ async function loadCriteria(
     };
   }
 
-  const [{ data: rows, error }, { data: rubric }] = await Promise.all([
-    admin
+  const [{ data: rows, error }, { data: rubric, error: rubricError }] = await Promise.all([
+    requester
       .from('rubric_criteria')
       .select('id, key, name_key, weight, max_score, enabled')
       .eq('rubric_id', assignment.rubric_id)
       .eq('enabled', true)
       .order('sort_order'),
-    admin.from('assignment_rubrics').select('is_custom').eq('id', assignment.rubric_id).maybeSingle(),
+    requester.from('assignment_rubrics').select('is_custom').eq('id', assignment.rubric_id).maybeSingle(),
   ]);
 
-  if (error || !rows?.length) {
-    throw new SubmissionGradingError('Assignment rubric is unavailable', 500);
+  if (error || rubricError || !rows?.length) {
+    throw new SubmissionGradingError('Assignment rubric is unavailable', 500, true);
   }
 
   return {
@@ -126,11 +131,15 @@ async function loadCriteria(
   };
 }
 
-async function setFailureStatus(admin: SupabaseClient, submissionId: string): Promise<void> {
-  const { error } = await admin
-    .from('submissions')
-    .update({ status: 'grading_failed' })
-    .eq('id', submissionId);
+async function setFailureStatus(
+  requester: SupabaseClient,
+  submissionId: string,
+  gradingServerSecret: string,
+): Promise<void> {
+  const { error } = await requester.rpc('fail_server_submission_grading', {
+    p_submission_id: submissionId,
+    p_server_secret: gradingServerSecret,
+  });
   if (error) console.error('[grading] failed to persist grading_failed status:', error.message);
 }
 
@@ -142,10 +151,7 @@ export async function gradeAndPersistSubmission(
   const token = bearerToken(authHeader);
   if (!token) throw new SubmissionGradingError('Unauthorized', 401);
 
-  const admin = createClient(deps.supabaseUrl, deps.serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
+  const requester = createRequesterClient(token, deps);
   const lookup = await loadSubmissionForRequester(submissionId, token, deps);
   if (lookup.error) {
     console.error('[grading] requester submission lookup failed:', lookup.error);
@@ -154,7 +160,7 @@ export async function gradeAndPersistSubmission(
   const submission = lookup.submission;
   if (!submission) throw new SubmissionGradingError('Submission not found', 404);
 
-  await authorizeSubmission(admin, token, submission);
+  await authorizeSubmission(requester, token, submission);
 
   if (!submission.text.trim()) throw new SubmissionGradingError('Submission text is empty', 400);
   if (!['in_progress', 'submitted', 'analyzing', 'grading_failed'].includes(submission.status)) {
@@ -163,7 +169,7 @@ export async function gradeAndPersistSubmission(
 
   let assignment: AssignmentRow | null = null;
   if (submission.assignment_id) {
-    const { data, error } = await admin
+    const { data, error } = await requester
       .from('assignments')
       .select('prompt, min_words, max_words, rubric_id, show_ai_score_immediately')
       .eq('id', submission.assignment_id)
@@ -172,20 +178,20 @@ export async function gradeAndPersistSubmission(
     assignment = data;
   }
 
-  const { criteria, usesCustomRubric } = await loadCriteria(admin, assignment);
-  const { data: descriptorRow } = await admin
+  const { criteria, usesCustomRubric } = await loadCriteria(requester, assignment);
+  const { data: descriptorRow, error: descriptorError } = await requester
     .from('cefr_level_descriptors')
     .select('descriptor')
     .eq('level', submission.level)
     .maybeSingle();
+  if (descriptorError) throw new SubmissionGradingError('Level descriptor is unavailable', 500, true);
 
-  const now = new Date().toISOString();
-  const { error: analyzingError } = await admin
-    .from('submissions')
-    .update({ status: 'analyzing', submitted_at: submission.submitted_at ?? now, last_saved_at: now })
-    .eq('id', submissionId);
+  const { error: analyzingError } = await requester.rpc('begin_server_submission_grading', {
+    p_submission_id: submissionId,
+    p_server_secret: deps.gradingServerSecret,
+  });
   if (analyzingError) {
-    console.error('[grading] could not set analyzing status:', analyzingError.message);
+    console.error('[grading] could not start grading:', analyzingError.message);
     throw new SubmissionGradingError('Could not start grading', 500, true);
   }
 
@@ -208,61 +214,21 @@ export async function gradeAndPersistSubmission(
     const nextStatus = submission.assignment_id ? 'teacher_review_pending' : 'result_ready';
     const scoreVisible = assignment ? assignment.show_ai_score_immediately : submission.score_visible_to_student;
 
-    const { error: cleanupScoresError } = await admin.from('criterion_scores').delete().eq('submission_id', submissionId);
-    if (cleanupScoresError) throw cleanupScoresError;
-    const { error: cleanupAnnotationsError } = await admin.from('writing_annotations').delete().eq('submission_id', submissionId);
-    if (cleanupAnnotationsError) throw cleanupAnnotationsError;
-    const { error: cleanupRecommendationsError } = await admin.from('study_recommendations').delete().eq('submission_id', submissionId);
-    if (cleanupRecommendationsError) throw cleanupRecommendationsError;
-
-    const { error: scoreError } = await admin.from('criterion_scores').insert(
-      result.criterionScores.map((score) => ({
-        submission_id: submissionId,
-        criterion_id: score.criterionId,
-        criterion_key: score.criterionKey,
-        ai_score: score.score,
-        max_score: score.maxScore,
-        weight: score.weight,
-        explanation: score.explanation,
-        evidence_quote: score.evidenceQuote,
-        strong_aspects: score.strongAspects,
-        development_areas: score.developmentAreas,
-      })),
-    );
-    if (scoreError) throw scoreError;
-
-    if (result.annotations.length) {
-      const { error: annotationError } = await admin.from('writing_annotations').insert(
-        result.annotations.map((annotation) => ({
-          submission_id: submissionId,
-          start_pos: annotation.start,
-          end_pos: annotation.end,
-          quoted_text: annotation.quotedText,
-          severity: annotation.severity,
-          category_id: annotation.categoryId,
-          explanation: annotation.explanation,
-          hint: annotation.hint,
-          suggested_correction: annotation.suggestedCorrection,
-        })),
-      );
-      if (annotationError) throw annotationError;
-    }
-
-    const { error: finishError } = await admin
-      .from('submissions')
-      .update({
-        ai_score: finalScore,
-        final_score: scoreVisible ? finalScore : null,
-        status: nextStatus,
-        score_visible_to_student: scoreVisible,
-        uses_custom_rubric: usesCustomRubric,
-      })
-      .eq('id', submissionId);
+    const { error: finishError } = await requester.rpc('complete_server_submission_grading', {
+      p_submission_id: submissionId,
+      p_server_secret: deps.gradingServerSecret,
+      p_final_score: finalScore,
+      p_next_status: nextStatus,
+      p_score_visible: scoreVisible,
+      p_uses_custom_rubric: usesCustomRubric,
+      p_criterion_scores: result.criterionScores,
+      p_annotations: result.annotations,
+    });
     if (finishError) throw finishError;
 
     return { finalScore, status: nextStatus };
   } catch (error) {
-    await setFailureStatus(admin, submissionId);
+    await setFailureStatus(requester, submissionId, deps.gradingServerSecret);
     if (error instanceof SubmissionGradingError) throw error;
     if (error instanceof GradingError) {
       throw new SubmissionGradingError(error.message, error.retryable ? 503 : 502, error.retryable);

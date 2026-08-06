@@ -16,6 +16,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const GRADING_SERVER_SECRET = process.env.GRADING_SERVER_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
 const APP_ORIGIN = process.env.APP_ORIGIN;
@@ -23,6 +24,7 @@ const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? '').split(',').map((value) =
 
 if (!GEMINI_API_KEY) console.warn('[server] GEMINI_API_KEY is not configured');
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) console.warn('[server] Supabase public configuration is incomplete');
+if (!GRADING_SERVER_SECRET) console.warn('[server] GRADING_SERVER_SECRET is not configured');
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] SUPABASE_SERVICE_ROLE_KEY is not configured');
 if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) console.warn('[server] Resend configuration is incomplete');
 
@@ -86,8 +88,8 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (_req, res) => {
-  const configured = Boolean(GEMINI_API_KEY && SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_ROLE_KEY);
-  res.status(configured ? 200 : 503).json({ status: configured ? 'ok' : 'degraded' });
+  const gradingConfigured = Boolean(GEMINI_API_KEY && SUPABASE_URL && SUPABASE_ANON_KEY && GRADING_SERVER_SECRET);
+  res.status(gradingConfigured ? 200 : 503).json({ status: gradingConfigured ? 'ok' : 'degraded' });
 });
 
 interface RequesterProfile {
@@ -125,7 +127,7 @@ async function getRequesterRole(authHeader: string | undefined): Promise<string 
 const submissionIdSchema = z.string().uuid();
 
 app.post('/api/submissions/:submissionId/grade', gradeLimiter, async (req, res) => {
-  if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY || !GRADING_SERVER_SECRET) {
     res.status(503).json({ error: 'Grading is not configured on the server' });
     return;
   }
@@ -139,7 +141,8 @@ app.post('/api/submissions/:submissionId/grade', gradeLimiter, async (req, res) 
   try {
     const result = await gradeAndPersistSubmission(parsedId.data, req.headers.authorization, {
       supabaseUrl: SUPABASE_URL,
-      serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      anonKey: SUPABASE_ANON_KEY,
+      gradingServerSecret: GRADING_SERVER_SECRET,
       geminiApiKey: GEMINI_API_KEY,
     });
     res.json(result);
