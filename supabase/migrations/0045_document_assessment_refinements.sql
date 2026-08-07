@@ -45,7 +45,7 @@ begin
     raise exception 'Forbidden' using errcode = '42501';
   end if;
 
-  select a.*, r.is_custom
+  select a, r.is_custom
   into v_assignment, v_uses_custom_rubric
   from public.assignments a
   join public.assignment_rubrics r on r.id = a.rubric_id
