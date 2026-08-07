@@ -88,11 +88,13 @@ function mapQuestion(row: Record<string, unknown>): ExamQuestionScore {
 }
 
 async function mapAttempt(row: Record<string, unknown>): Promise<ExamAttempt> {
-  const { data: scoreRows } = await supabase
+  const { data: scoreRows, error: scoreError } = await supabase
     .from('exam_question_scores')
     .select('*')
     .eq('attempt_id', row.id)
     .order('sort_order');
+  if (scoreError) throw scoreError;
+
   return {
     id: row.id as string,
     examId: row.exam_id as string,
@@ -248,10 +250,13 @@ export async function fetchSchoolSharedAssignments(schoolId: string): Promise<Sc
     .eq('shared_with_school', true)
     .order('created_at', { ascending: false });
   if (error) throw error;
+
   const creatorIds = [...new Set((rows ?? []).map((row) => row.created_by as string).filter(Boolean))];
-  const { data: creators } = creatorIds.length
+  const { data: creators, error: creatorsError } = creatorIds.length
     ? await supabase.from('profiles').select('id, display_name').in('id', creatorIds)
-    : { data: [] as Record<string, unknown>[] };
+    : { data: [] as Record<string, unknown>[], error: null };
+  if (creatorsError) throw creatorsError;
+
   return (rows ?? []).map((row) => ({
     id: row.id as string,
     title: row.title as string,
@@ -260,7 +265,7 @@ export async function fetchSchoolSharedAssignments(schoolId: string): Promise<Sc
     level: row.level as CefrLevel,
     maxPoints: Number(row.max_points ?? 100),
     createdBy: row.created_by as string,
-    creatorName: (creators ?? []).find((creator) => creator.id === row.created_by)?.display_name as string || '',
+    creatorName: ((creators ?? []).find((creator) => creator.id === row.created_by)?.display_name as string) || '',
     createdAt: row.created_at as string,
     vocabularyRequirements: (row.vocabulary_requirements as string | null) ?? undefined,
     patternRequirements: (row.pattern_requirements as string | null) ?? undefined,
@@ -406,7 +411,11 @@ export async function createExamDefinition(input: {
 }
 
 export async function fetchExamDefinitions(schoolId: string): Promise<ExamDefinition[]> {
-  const { data, error } = await supabase.from('exam_definitions').select('*').eq('school_id', schoolId).order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('exam_definitions')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapExam);
 }
@@ -418,34 +427,16 @@ export async function fetchExamDefinition(examId: string): Promise<ExamDefinitio
 }
 
 export async function createExamAttemptFromItem(itemId: string, examId: string, studentId: string): Promise<ExamAttempt> {
-  const { data: item, error: itemError } = await supabase
-    .from('document_import_items')
-    .select('id, ocr_text, ocr_markdown, batch_id')
-    .eq('id', itemId)
-    .maybeSingle();
-  if (itemError || !item?.ocr_text) throw itemError ?? new Error('ocr_item_not_ready');
-  const { data: exam, error: examError } = await supabase.from('exam_definitions').select('school_id').eq('id', examId).maybeSingle();
-  if (examError || !exam) throw examError ?? new Error('exam_not_found');
-  const { data, error } = await supabase
-    .from('exam_attempts')
-    .insert({
-      exam_id: examId,
-      school_id: exam.school_id,
-      student_id: studentId,
-      document_item_id: itemId,
-      ocr_text: item.ocr_text,
-      ocr_markdown: item.ocr_markdown,
-      status: 'grading_pending',
-      feedback_visible: false,
-    })
-    .select('*')
-    .single();
-  if (error || !data) throw error ?? new Error('exam_attempt_create_failed');
-  await supabase
-    .from('document_import_items')
-    .update({ student_id: studentId, linked_exam_attempt_id: data.id, review_status: 'ready_for_grading' })
-    .eq('id', itemId);
-  return mapAttempt(data);
+  const { data, error } = await supabase.rpc('create_exam_attempt_from_item', {
+    p_item_id: itemId,
+    p_exam_id: examId,
+    p_student_id: studentId,
+  });
+  if (error || typeof data !== 'string') throw error ?? new Error('exam_attempt_create_failed');
+
+  const attempt = await fetchExamAttempt(data);
+  if (!attempt) throw new Error('exam_attempt_create_failed');
+  return attempt;
 }
 
 export async function gradeExamAttempt(attemptId: string): Promise<void> {
@@ -453,7 +444,11 @@ export async function gradeExamAttempt(attemptId: string): Promise<void> {
 }
 
 export async function fetchExamAttempts(examId: string): Promise<ExamAttempt[]> {
-  const { data, error } = await supabase.from('exam_attempts').select('*').eq('exam_id', examId).order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('exam_attempts')
+    .select('*')
+    .eq('exam_id', examId)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return Promise.all((data ?? []).map(mapAttempt));
 }
@@ -465,18 +460,12 @@ export async function fetchExamAttempt(attemptId: string): Promise<ExamAttempt |
 }
 
 export async function setExamQuestionTeacherScore(questionId: string, score: number): Promise<void> {
-  const { data: question, error: loadError } = await supabase
-    .from('exam_question_scores')
-    .select('attempt_id, max_score')
-    .eq('id', questionId)
-    .maybeSingle();
-  if (loadError || !question) throw loadError ?? new Error('question_not_found');
-  const bounded = Math.max(0, Math.min(Number(question.max_score), score));
-  const { error } = await supabase.from('exam_question_scores').update({ teacher_score: bounded }).eq('id', questionId);
+  if (!Number.isFinite(score)) throw new Error('invalid_teacher_score');
+  const { error } = await supabase.rpc('set_exam_question_teacher_score', {
+    p_question_id: questionId,
+    p_score: score,
+  });
   if (error) throw error;
-  const { data: rows } = await supabase.from('exam_question_scores').select('ai_score, teacher_score').eq('attempt_id', question.attempt_id);
-  const finalScore = (rows ?? []).reduce((sum, row) => sum + Number(row.teacher_score ?? row.ai_score ?? 0), 0);
-  await supabase.from('exam_attempts').update({ final_score: Number(finalScore.toFixed(2)), updated_at: new Date().toISOString() }).eq('id', question.attempt_id);
 }
 
 export async function approveExamAttempt(input: {
@@ -485,32 +474,24 @@ export async function approveExamAttempt(input: {
   feedback?: string;
   feedbackVisible: boolean;
 }): Promise<void> {
-  const { error } = await supabase
-    .from('exam_attempts')
-    .update({
-      status: 'approved',
-      teacher_feedback: input.feedback || null,
-      feedback_visible: input.feedbackVisible,
-      reviewed_by: input.teacherId,
-      reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.attemptId);
+  void input.teacherId;
+  const { error } = await supabase.rpc('review_exam_attempt', {
+    p_attempt_id: input.attemptId,
+    p_action: 'approve',
+    p_feedback: input.feedback ?? '',
+    p_feedback_visible: input.feedbackVisible,
+  });
   if (error) throw error;
 }
 
 export async function returnExamAttempt(attemptId: string, teacherId: string, feedback: string): Promise<void> {
-  const { error } = await supabase
-    .from('exam_attempts')
-    .update({
-      status: 'returned',
-      teacher_feedback: feedback,
-      feedback_visible: false,
-      reviewed_by: teacherId,
-      reviewed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', attemptId);
+  void teacherId;
+  const { error } = await supabase.rpc('review_exam_attempt', {
+    p_attempt_id: attemptId,
+    p_action: 'return',
+    p_feedback: feedback,
+    p_feedback_visible: false,
+  });
   if (error) throw error;
 }
 
@@ -527,12 +508,22 @@ export async function fetchStudentVisibleExamAttempts(studentId: string): Promis
 }
 
 export async function createExamAppeal(attemptId: string, studentId: string, reason: string): Promise<void> {
-  const { error } = await supabase.from('exam_appeals').insert({ attempt_id: attemptId, student_id: studentId, reason: reason.trim() });
+  const trimmed = reason.trim();
+  if (trimmed.length < 5) throw new Error('appeal_reason_too_short');
+  const { error } = await supabase.from('exam_appeals').insert({
+    attempt_id: attemptId,
+    student_id: studentId,
+    reason: trimmed,
+  });
   if (error) throw error;
 }
 
 export async function fetchExamAppeals(attemptId: string): Promise<ExamAppeal[]> {
-  const { data, error } = await supabase.from('exam_appeals').select('*').eq('attempt_id', attemptId).order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('exam_appeals')
+    .select('*')
+    .eq('attempt_id', attemptId)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapAppeal);
 }
@@ -543,14 +534,11 @@ export async function resolveExamAppeal(input: {
   response: string;
   teacherId: string;
 }): Promise<void> {
-  const { error } = await supabase
-    .from('exam_appeals')
-    .update({
-      status: input.status,
-      teacher_response: input.response,
-      resolved_by: input.teacherId,
-      resolved_at: new Date().toISOString(),
-    })
-    .eq('id', input.appealId);
+  void input.teacherId;
+  const { error } = await supabase.rpc('resolve_exam_appeal', {
+    p_appeal_id: input.appealId,
+    p_status: input.status,
+    p_response: input.response,
+  });
   if (error) throw error;
 }
