@@ -21,6 +21,8 @@ interface AssignmentRow {
   max_words: number | null;
   rubric_id: string;
   show_ai_score_immediately: boolean;
+  vocabulary_requirements: string | null;
+  pattern_requirements: string | null;
 }
 
 interface ProfileRow {
@@ -120,13 +122,22 @@ async function loadCriteria(
   }
 
   return {
-    criteria: rows.map((row) => ({
-      id: row.id as string,
-      key: row.key as string,
-      nameKey: row.name_key as string,
-      weight: Number(row.weight),
-      maxScore: Number(row.max_score),
-    })),
+    criteria: rows.map((row) => {
+      const key = row.key as string;
+      const description = key === 'required_vocabulary'
+        ? assignment.vocabulary_requirements ?? undefined
+        : key === 'required_patterns'
+          ? assignment.pattern_requirements ?? undefined
+          : undefined;
+      return {
+        id: row.id as string,
+        key,
+        nameKey: row.name_key as string,
+        description,
+        weight: Number(row.weight),
+        maxScore: Number(row.max_score),
+      };
+    }),
     usesCustomRubric: Boolean(rubric?.is_custom),
   };
 }
@@ -171,7 +182,7 @@ export async function gradeAndPersistSubmission(
   if (submission.assignment_id) {
     const { data, error } = await requester
       .from('assignments')
-      .select('prompt, min_words, max_words, rubric_id, show_ai_score_immediately')
+      .select('prompt, min_words, max_words, rubric_id, show_ai_score_immediately, vocabulary_requirements, pattern_requirements')
       .eq('id', submission.assignment_id)
       .maybeSingle<AssignmentRow>();
     if (error || !data) throw new SubmissionGradingError('Assignment not found', 404);
@@ -185,6 +196,13 @@ export async function gradeAndPersistSubmission(
     .eq('level', submission.level)
     .maybeSingle();
   if (descriptorError) throw new SubmissionGradingError('Level descriptor is unavailable', 500, true);
+
+  const { data: ocrImport } = await requester
+    .from('document_import_items')
+    .select('id')
+    .eq('linked_submission_id', submissionId)
+    .maybeSingle();
+  const importedFromOcr = Boolean(ocrImport);
 
   const { error: analyzingError } = await requester.rpc('begin_server_submission_grading', {
     p_submission_id: submissionId,
@@ -212,7 +230,11 @@ export async function gradeAndPersistSubmission(
 
     const finalScore = recomputeFinalScore(result.criterionScores);
     const nextStatus = submission.assignment_id ? 'teacher_review_pending' : 'result_ready';
-    const scoreVisible = assignment ? assignment.show_ai_score_immediately : submission.score_visible_to_student;
+    const scoreVisible = importedFromOcr
+      ? false
+      : assignment
+        ? assignment.show_ai_score_immediately
+        : submission.score_visible_to_student;
 
     const { error: finishError } = await requester.rpc('complete_server_submission_grading', {
       p_submission_id: submissionId,
