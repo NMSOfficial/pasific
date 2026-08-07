@@ -130,8 +130,8 @@ function buildPrompt(input: GradeRequest, levelDescriptor?: string): { systemIns
   const criteriaLines = input.criteria
     .map((c) => {
       const label = resolveLabel(c.nameKey);
-      const description = resolveDescription(c.nameKey);
-      return `- id="${c.id}" name="${label}"${description ? ` description="${description}"` : ''} maxScore=${c.maxScore} weight=${c.weight}`;
+      const description = c.description ?? resolveDescription(c.nameKey);
+      return `- id="${c.id}" name="${label}"${description ? ` description="${description.replace(/"/g, '\\"')}"` : ''} maxScore=${c.maxScore} weight=${c.weight}`;
     })
     .join('\n');
 
