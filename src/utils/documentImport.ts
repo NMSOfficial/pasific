@@ -137,9 +137,19 @@ function parseZipEntries(buffer: ArrayBuffer): ZipEntryMeta[] {
   return entries;
 }
 
+function stripControlCharacters(value: string): string {
+  return Array.from(value)
+    .filter((character) => {
+      const code = character.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('');
+}
+
 function safeBaseName(path: string): string {
   const normalized = path.replace(/\\/g, '/');
-  return normalized.split('/').filter(Boolean).pop()?.replace(/[\u0000-\u001f]/g, '') || 'document';
+  const baseName = normalized.split('/').filter(Boolean).pop() || 'document';
+  return stripControlCharacters(baseName).trim() || 'document';
 }
 
 export async function extractSupportedFilesFromZip(zipFile: File): Promise<File[]> {
