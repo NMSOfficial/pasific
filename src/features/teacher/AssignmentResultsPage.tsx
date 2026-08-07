@@ -10,6 +10,7 @@ import { PdfExportButton } from '../../components/PdfExportButton';
 import { formatDate } from '../../utils/format';
 import { exportClassReportPdf } from '../../utils/pdf';
 import { exportXlsx } from '../../utils/excel';
+import { formatScaledScore, scaleWritingScore } from '../../utils/scoringScale';
 import { fetchAssignment } from '../../services/assignmentData';
 import { fetchClass, fetchStudentsByIds } from '../../services/teacherData';
 import { fetchSubmissionsForAssignment } from '../../services/submissionData';
@@ -50,8 +51,10 @@ export function AssignmentResultsPage() {
   if (assignment === null) return <Navigate to="/teacher/assignments" replace />;
   if (assignment === undefined) return <LoadingSkeleton height="12rem" />;
 
+  const maxPoints = assignment.maxPoints ?? 100;
   const scored = rows.filter((r) => r.sub?.finalScore !== undefined);
-  const avgScore = scored.length ? Math.round(scored.reduce((sum, r) => sum + (r.sub!.finalScore ?? 0), 0) / scored.length) : undefined;
+  const avgNormalized = scored.length ? scored.reduce((sum, r) => sum + (r.sub!.finalScore ?? 0), 0) / scored.length : undefined;
+  const avgScore = scaleWritingScore(avgNormalized, maxPoints);
   const submittedCount = rows.filter((r) => r.sub && r.sub.status !== 'not_started' && r.sub.status !== 'in_progress').length;
   const notStartedCount = rows.filter((r) => !r.sub || r.sub.status === 'not_started').length;
   const classLabel = classNames.join(', ') || t('nav.teacher.classes');
@@ -59,7 +62,7 @@ export function AssignmentResultsPage() {
     studentName: student?.displayName ?? '',
     username: student?.username ?? '',
     status: t(`submissionStatus.${sub?.status ?? 'not_started'}`),
-    score: sub?.finalScore ?? sub?.aiScore,
+    score: scaleWritingScore(sub?.finalScore ?? sub?.aiScore, maxPoints),
     submittedAt: sub?.submittedAt ? formatDate(sub.submittedAt, i18n.resolvedLanguage ?? 'tr') : '',
   }));
 
@@ -70,12 +73,13 @@ export function AssignmentResultsPage() {
     locale: i18n.resolvedLanguage ?? 'tr',
     rows: reportRows.map((row) => ({ studentName: row.studentName, status: row.status, score: row.score })),
     averageScore: avgScore,
+    maxScore: maxPoints,
   });
 
   const exportExcel = () => exportXlsx({
     fileName: `pasific-${assignment.title}-submissions`,
     sheetName: assignment.title,
-    columns: [t('common.student'), t('settings.username'), t('common.status'), t('common.score'), t('teacher.classes.lastSubmission')],
+    columns: [t('common.student'), t('settings.username'), t('common.status'), `${t('common.score')} / ${maxPoints}`, t('teacher.classes.lastSubmission')],
     rows: reportRows.map((row) => [row.studentName, row.username, row.status, row.score, row.submittedAt]),
   });
 
@@ -83,7 +87,7 @@ export function AssignmentResultsPage() {
     <>
       <PageHeader
         title={assignment.title}
-        subtitle={t('teacher.assignments.resultsTitle')}
+        subtitle={`${t('teacher.assignments.resultsTitle')} · ${maxPoints} üzerinden`}
         actions={
           <>
             <PdfExportButton onExport={exportPdf} />
@@ -95,7 +99,7 @@ export function AssignmentResultsPage() {
       />
 
       <div className="stat-row" style={{ marginBottom: 'var(--space-6)' }}>
-        <div className="stat-tile"><span className="stat-tile__value">{avgScore ?? '—'}</span><span className="stat-tile__label">{t('teacher.assignments.avgScore')}</span></div>
+        <div className="stat-tile"><span className="stat-tile__value">{avgScore !== undefined ? `${avgScore}/${maxPoints}` : '—'}</span><span className="stat-tile__label">{t('teacher.assignments.avgScore')}</span></div>
         <div className="stat-tile"><span className="stat-tile__value">{submittedCount}</span><span className="stat-tile__label">{t('teacher.assignments.submittedCount')}</span></div>
         <div className="stat-tile"><span className="stat-tile__value">{notStartedCount}</span><span className="stat-tile__label">{t('teacher.assignments.notStartedCount')}</span></div>
       </div>
@@ -118,7 +122,7 @@ export function AssignmentResultsPage() {
                   {student?.username && <div className="field__hint">@{student.username}</div>}
                 </td>
                 <td><SubmissionStatusBadge status={sub?.status ?? 'not_started'} /></td>
-                <td>{sub?.finalScore !== undefined ? `${sub.finalScore}/100` : sub?.aiScore !== undefined ? `${t('rubric.aiSuggestedScore')}: ${sub.aiScore}` : '—'}</td>
+                <td>{sub?.finalScore !== undefined ? formatScaledScore(sub.finalScore, maxPoints) : sub?.aiScore !== undefined ? `${t('rubric.aiSuggestedScore')}: ${formatScaledScore(sub.aiScore, maxPoints)}` : '—'}</td>
                 <td>{sub && sub.status !== 'not_started' && sub.status !== 'in_progress' && (
                   <Link to={`/teacher/submissions/${sub.id}`} className="btn btn--ghost btn--sm">{t('common.seeDetails')}</Link>
                 )}</td>
@@ -136,7 +140,7 @@ export function AssignmentResultsPage() {
               <SubmissionStatusBadge status={sub?.status ?? 'not_started'} />
             </div>
             {student?.username && <span className="field__hint">@{student.username}</span>}
-            <span className="field__hint">{sub?.finalScore !== undefined ? `${sub.finalScore}/100` : '—'} {sub?.submittedAt ? `· ${formatDate(sub.submittedAt, i18n.resolvedLanguage ?? 'tr')}` : ''}</span>
+            <span className="field__hint">{formatScaledScore(sub?.finalScore, maxPoints)} {sub?.submittedAt ? `· ${formatDate(sub.submittedAt, i18n.resolvedLanguage ?? 'tr')}` : ''}</span>
             {sub && sub.status !== 'not_started' && sub.status !== 'in_progress' && (
               <Link to={`/teacher/submissions/${sub.id}`} className="btn btn--secondary btn--sm" style={{ alignSelf: 'flex-start' }}>{t('common.seeDetails')}</Link>
             )}
