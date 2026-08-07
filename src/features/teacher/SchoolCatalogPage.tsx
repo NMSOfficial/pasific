@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { CatalogTopic, TeacherProfile } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -25,6 +26,7 @@ export function SchoolCatalogPage() {
   const schoolId = teacher.schoolIds[0];
 
   const [tab, setTab] = useState<Tab>('pasific');
+  const [query, setQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState<{ type: 'hide' | 'delete'; topic: CatalogTopic } | null>(null);
   const [visible, setVisible] = useState<CatalogTopic[] | null>(null);
   const [hiddenTopics, setHiddenTopics] = useState<CatalogTopic[]>([]);
@@ -38,11 +40,21 @@ export function SchoolCatalogPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
-  if (!visible) return <LoadingSkeleton height="12rem" />;
+  const list = useMemo(() => {
+    if (!visible) return [];
+    const pasificTopics = visible.filter((topic) => topic.visibility === 'global');
+    const schoolTopics = visible.filter((topic) => topic.visibility === 'school');
+    const rawList = tab === 'pasific' ? pasificTopics : tab === 'school' ? schoolTopics : tab === 'hidden' ? hiddenTopics : drafts;
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return rawList;
+    return rawList.filter((topic) =>
+      topic.title.toLocaleLowerCase().includes(normalizedQuery)
+      || topic.prompt.toLocaleLowerCase().includes(normalizedQuery)
+      || topic.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery)),
+    );
+  }, [visible, hiddenTopics, drafts, tab, query]);
 
-  const pasificTopics = visible.filter((t2) => t2.visibility === 'global');
-  const schoolTopics = visible.filter((t2) => t2.visibility === 'school');
-  const list = tab === 'pasific' ? pasificTopics : tab === 'school' ? schoolTopics : tab === 'hidden' ? hiddenTopics : drafts;
+  if (!visible) return <LoadingSkeleton height="12rem" />;
 
   const confirmDialog = () => {
     if (!confirmAction) return null;
@@ -73,11 +85,22 @@ export function SchoolCatalogPage() {
     <>
       <PageHeader title={t('nav.teacher.catalog')} actions={canManage ? <Link to="/teacher/assignments/new" className="btn btn--primary">{t('teacher.catalog.newTopic')}</Link> : undefined} />
 
-      <div className="segmented-control" style={{ marginBottom: 'var(--space-5)' }}>
+      <div className="segmented-control" style={{ marginBottom: 'var(--space-4)' }}>
         <button type="button" className={`segmented-control__option ${tab === 'pasific' ? 'is-active' : ''}`} onClick={() => setTab('pasific')}>{t('teacher.catalog.tabPasific')}</button>
         <button type="button" className={`segmented-control__option ${tab === 'school' ? 'is-active' : ''}`} onClick={() => setTab('school')}>{t('teacher.catalog.tabSchool')}</button>
         <button type="button" className={`segmented-control__option ${tab === 'hidden' ? 'is-active' : ''}`} onClick={() => setTab('hidden')}>{t('teacher.catalog.tabHidden')}</button>
         <button type="button" className={`segmented-control__option ${tab === 'drafts' ? 'is-active' : ''}`} onClick={() => setTab('drafts')}>{t('teacher.catalog.tabDrafts')}</button>
+      </div>
+
+      <div className="input-with-action" style={{ maxWidth: '24rem', marginBottom: 'var(--space-5)' }}>
+        <input
+          className="input-control"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t('catalog.searchPlaceholder')}
+          aria-label={t('common.search')}
+        />
+        <span className="input-with-action__action" style={{ pointerEvents: 'none' }}><Search size={16} aria-hidden="true" /></span>
       </div>
 
       {list.length === 0 ? (
