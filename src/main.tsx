@@ -4,6 +4,7 @@ import './i18n';
 import './styles/global.css';
 import './styles/components.css';
 import './styles/auth.css';
+import './styles/ux-updates.css';
 import App from './App.tsx';
 
 createRoot(document.getElementById('root')!).render(
