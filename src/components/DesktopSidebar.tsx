@@ -14,8 +14,8 @@ export function DesktopSidebar({ items, collapsed, onToggleCollapsed }: DesktopS
   const { t } = useTranslation();
   return (
     <nav className={`desktop-sidebar ${collapsed ? 'is-collapsed' : ''}`} aria-label={t('nav.student.home')}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingInline: 'var(--space-2)' }}>
-        {!collapsed && <PasificLogo size="sm" className="pasific-logo--on-dark" />}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', paddingInline: 'var(--space-2)', minHeight: 40 }}>
+        {!collapsed && <PasificLogo size="md" variant="full" className="pasific-logo--on-dark" />}
         {collapsed && <PasificLogo size="sm" variant="icon" />}
       </div>
       <ul className="sidebar-nav" role="list">
