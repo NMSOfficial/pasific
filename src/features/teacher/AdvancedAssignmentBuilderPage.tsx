@@ -142,7 +142,7 @@ export function AdvancedAssignmentBuilderPage() {
   const canSave = title.trim() && prompt.trim() && dueAt && selectedClasses.length > 0 && totalWeight === 100 && maxPoints > 0;
   const selectedTopic = useMemo(() => topics?.find((topic) => topic.id === topicId), [topics, topicId]);
 
-  const useTopic = (id: string) => {
+  const applyTopic = (id: string) => {
     setTopicId(id);
     const topic = topics?.find((candidate) => candidate.id === id);
     if (!topic) return;
@@ -278,7 +278,7 @@ export function AdvancedAssignmentBuilderPage() {
             <h2>Konu ve temel bilgiler</h2>
             <div className="field">
               <label className="field__label" htmlFor="advanced-topic">Katalog konusu (opsiyonel)</label>
-              <select id="advanced-topic" className="select-control" value={topicId} onChange={(event) => useTopic(event.target.value)}>
+              <select id="advanced-topic" className="select-control" value={topicId} onChange={(event) => applyTopic(event.target.value)}>
                 <option value="">Manuel konu</option>
                 {topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title} · {topic.level}</option>)}
               </select>
