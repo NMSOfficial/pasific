@@ -4,6 +4,7 @@ import { z, ZodError } from 'zod';
 import { requestPasswordReset } from './passwordReset.ts';
 import { deleteUserAccount } from './adminActions.ts';
 import { gradeAndPersistSubmission, SubmissionGradingError } from './submissionGrading.ts';
+import { registerDocumentAssessmentRoutes } from './documentAssessmentRoutes.ts';
 
 try {
   process.loadEnvFile();
@@ -17,6 +18,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const GRADING_SERVER_SECRET = process.env.GRADING_SERVER_SECRET;
+const INTEGRATION_ENCRYPTION_KEY = process.env.INTEGRATION_ENCRYPTION_KEY;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
 const APP_ORIGIN = process.env.APP_ORIGIN;
@@ -36,13 +38,14 @@ const PASIFIC_VERCEL_ORIGIN = /^https:\/\/pasific(?:-[a-z0-9-]+)?\.vercel\.app$/
 if (!GEMINI_API_KEY) console.warn('[server] GEMINI_API_KEY is not configured');
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) console.warn('[server] Supabase public configuration is incomplete');
 if (!GRADING_SERVER_SECRET) console.warn('[server] GRADING_SERVER_SECRET is not configured');
+if (!INTEGRATION_ENCRYPTION_KEY) console.warn('[server] INTEGRATION_ENCRYPTION_KEY is not configured; grading secret will be used as the integration encryption seed');
 if (!SUPABASE_SERVICE_ROLE_KEY) console.warn('[server] SUPABASE_SERVICE_ROLE_KEY is not configured');
 if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) console.warn('[server] Resend configuration is incomplete');
 
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '16mb' }));
 app.use((req, res, next) => {
   req.url = req.url.replace(/\/{2,}/g, '/');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -173,6 +176,16 @@ app.post('/api/submissions/:submissionId/grade', gradeLimiter, async (req, res) 
     throw error;
   }
 });
+
+if (GEMINI_API_KEY && SUPABASE_URL && SUPABASE_ANON_KEY && GRADING_SERVER_SECRET) {
+  registerDocumentAssessmentRoutes(app, {
+    supabaseUrl: SUPABASE_URL,
+    anonKey: SUPABASE_ANON_KEY,
+    gradingServerSecret: GRADING_SERVER_SECRET,
+    geminiApiKey: GEMINI_API_KEY,
+    integrationEncryptionKey: INTEGRATION_ENCRYPTION_KEY,
+  });
+}
 
 const passwordResetRequestSchema = z.object({
   username: z.string().trim().min(1).max(100),
