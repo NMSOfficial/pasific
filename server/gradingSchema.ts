@@ -4,6 +4,7 @@ export const criterionInputSchema = z.object({
   id: z.string(),
   key: z.string(),
   nameKey: z.string(),
+  description: z.string().optional(),
   weight: z.number(),
   maxScore: z.number().positive(),
 });
