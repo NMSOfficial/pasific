@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Maximize2, Minimize2, CheckCircle2 } from 'lucide-react';
+import { Maximize2, Minimize2, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { Assignment, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -27,6 +27,7 @@ export function WritingEditorPage() {
   const [fullscreen, setFullscreen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [integrityNotice, setIntegrityNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!assignmentId) return;
@@ -80,6 +81,29 @@ export function WritingEditorPage() {
     void submitSubmission(submission.id);
   };
 
+  const rejectExternalInsertion = () => {
+    setIntegrityNotice(i18n.resolvedLanguage?.startsWith('tr')
+      ? 'Yapıştırma ve dışarıdan toplu metin ekleme bu yazma alanında kapalıdır.'
+      : 'Paste and bulk external text insertion are disabled in this writing area.');
+  };
+
+  const handleBeforeInput = (event: FormEvent<HTMLTextAreaElement>) => {
+    const inputType = (event.nativeEvent as InputEvent).inputType;
+    if (inputType === 'insertFromPaste' || inputType === 'insertFromDrop' || inputType === 'insertFromYank') {
+      event.preventDefault();
+      rejectExternalInsertion();
+    }
+  };
+
+  const handleTextChange = (nextText: string) => {
+    if (nextText.length - text.length > 32) {
+      rejectExternalInsertion();
+      return;
+    }
+    setIntegrityNotice(null);
+    setText(nextText);
+  };
+
   return (
     <div className={fullscreen ? 'writing-editor--fullscreen' : ''}>
       {!fullscreen && <PageHeader title={assignment.title} />}
@@ -116,13 +140,24 @@ export function WritingEditorPage() {
             </div>
           </div>
 
+          {integrityNotice && (
+            <div className="writing-integrity-notice" role="alert">
+              <ShieldAlert size={16} aria-hidden="true" />
+              <span>{integrityNotice}</span>
+            </div>
+          )}
+
           <label htmlFor="writing-textarea" className="visually-hidden">{assignment.title}</label>
           <textarea
             id="writing-textarea"
             className="writing-editor__textarea"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onBeforeInput={handleBeforeInput}
+            onPaste={(event) => { event.preventDefault(); rejectExternalInsertion(); }}
+            onDrop={(event) => { event.preventDefault(); rejectExternalInsertion(); }}
+            onChange={(event) => handleTextChange(event.target.value)}
             placeholder={t('editor.placeholder')}
+            autoComplete="off"
             style={fullscreen ? { minHeight: 0 } : undefined}
           />
 
