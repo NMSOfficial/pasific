@@ -37,16 +37,19 @@ const ExampleLibraryPage = lazyNamed(() => import('../features/student/ExampleLi
 const ExampleDetailPage = lazyNamed(() => import('../features/student/ExampleDetailPage'), 'ExampleDetailPage');
 const StudentPortfolioPage = lazyNamed(() => import('../features/student/StudentPortfolioPage'), 'StudentPortfolioPage');
 const StudentSettingsPage = lazyNamed(() => import('../features/student/StudentSettingsPage'), 'StudentSettingsPage');
+const StudentExamResultsPage = lazyNamed(() => import('../features/student/StudentExamResultsPage'), 'StudentExamResultsPage');
 
 const TeacherDashboardPage = lazyNamed(() => import('../features/teacher/TeacherDashboardPage'), 'TeacherDashboardPage');
 const ClassListPage = lazyNamed(() => import('../features/teacher/ClassListPage'), 'ClassListPage');
 const ClassDetailPage = lazyNamed(() => import('../features/teacher/ClassDetailPage'), 'ClassDetailPage');
 const StudentDetailPage = lazyNamed(() => import('../features/teacher/StudentDetailPage'), 'StudentDetailPage');
 const TeacherAssignmentListPage = lazyNamed(() => import('../features/teacher/TeacherAssignmentListPage'), 'TeacherAssignmentListPage');
-const AssignmentBuilderPage = lazyNamed(() => import('../features/teacher/AssignmentBuilderPage'), 'AssignmentBuilderPage');
+const AdvancedAssignmentBuilderPage = lazyNamed(() => import('../features/teacher/AdvancedAssignmentBuilderPage'), 'AdvancedAssignmentBuilderPage');
 const TeacherAssignmentDetailPage = lazyNamed(() => import('../features/teacher/TeacherAssignmentDetailPage'), 'TeacherAssignmentDetailPage');
 const AssignmentResultsPage = lazyNamed(() => import('../features/teacher/AssignmentResultsPage'), 'AssignmentResultsPage');
 const TeacherSubmissionReviewPage = lazyNamed(() => import('../features/teacher/TeacherSubmissionReviewPage'), 'TeacherSubmissionReviewPage');
+const DocumentAssessmentHubPage = lazyNamed(() => import('../features/teacher/DocumentAssessmentHubPage'), 'DocumentAssessmentHubPage');
+const TeacherExamReviewPage = lazyNamed(() => import('../features/teacher/TeacherExamReviewPage'), 'TeacherExamReviewPage');
 const SchoolCatalogPage = lazyNamed(() => import('../features/teacher/SchoolCatalogPage'), 'SchoolCatalogPage');
 const TeacherReportsPage = lazyNamed(() => import('../features/teacher/TeacherReportsPage'), 'TeacherReportsPage');
 const SchoolSettingsPage = lazyNamed(() => import('../features/teacher/SchoolSettingsPage'), 'SchoolSettingsPage');
@@ -99,6 +102,7 @@ export function AppRoutes() {
           <Route path="assignments/:assignmentId" element={<AssignmentDetailPage />} />
           <Route path="assignments/:assignmentId/write" element={<WritingEditorPage />} />
           <Route path="submissions/:submissionId/result" element={<SubmissionResultPage />} />
+          <Route path="exam-results" element={<StudentExamResultsPage />} />
           <Route path="practice" element={<PracticeHomePage />} />
           <Route path="practice/new" element={<PracticeNewPage />} />
           <Route path="practice/:submissionId/write" element={<PracticeWritingPage />} />
@@ -125,10 +129,12 @@ export function AppRoutes() {
           <Route path="students/:studentId" element={<StudentDetailPage />} />
           <Route path="students/:studentId/portfolio" element={<StudentDetailPage portfolioTab />} />
           <Route path="assignments" element={<TeacherAssignmentListPage />} />
-          <Route path="assignments/new" element={<AssignmentBuilderPage />} />
+          <Route path="assignments/new" element={<AdvancedAssignmentBuilderPage />} />
           <Route path="assignments/:assignmentId" element={<TeacherAssignmentDetailPage />} />
           <Route path="assignments/:assignmentId/results" element={<AssignmentResultsPage />} />
           <Route path="submissions/:submissionId" element={<TeacherSubmissionReviewPage />} />
+          <Route path="assessment-hub" element={<DocumentAssessmentHubPage />} />
+          <Route path="exams/:examId/attempts/:attemptId" element={<TeacherExamReviewPage />} />
           <Route path="catalog" element={<SchoolCatalogPage />} />
           <Route path="examples" element={<ExampleLibraryPage basePath="/teacher" />} />
           <Route path="examples/:exampleId" element={<ExampleDetailPage basePath="/teacher" />} />
