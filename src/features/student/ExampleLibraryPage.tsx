@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import type { CefrLevel, PerformanceBand, WritingExample } from '../../types/entities';
+import { Search } from 'lucide-react';
+import type { CefrLevel, WritingExample } from '../../types/entities';
 import { CEFR_LEVELS } from '../../utils/cefr';
 import { PageHeader } from '../../components/PageHeader';
 import { CefrLevelBadge } from '../../components/CefrLevelBadge';
@@ -11,23 +12,27 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { fetchExamples } from '../../services/exampleData';
 
 const LEVELS = CEFR_LEVELS;
-const BANDS: PerformanceBand[] = ['developing', 'meets_expectations', 'strong', 'advanced'];
 
 /** Shared by the student and teacher example-library screens (both allowed to browse, differ only in route prefix). */
 export function ExampleLibraryPage({ basePath = '/student' }: { basePath?: string }) {
   const { t } = useTranslation();
   const [allExamples, setAllExamples] = useState<WritingExample[] | null>(null);
-  const [level, setLevel] = useState<CefrLevel | 'all'>('all');
-  const [band, setBand] = useState<PerformanceBand | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const [levels, setLevels] = useState<CefrLevel[]>([...LEVELS]);
 
   useEffect(() => { fetchExamples().then(setAllExamples); }, []);
 
   const examples = useMemo(() => {
     if (!allExamples) return [];
+    const normalizedQuery = query.trim().toLocaleLowerCase();
     return allExamples
-      .filter((e) => level === 'all' || e.level === level)
-      .filter((e) => band === 'all' || e.performanceBand === band);
-  }, [allExamples, level, band]);
+      .filter((example) => levels.includes(example.level))
+      .filter((example) => !normalizedQuery || example.title.toLocaleLowerCase().includes(normalizedQuery) || example.text.toLocaleLowerCase().includes(normalizedQuery));
+  }, [allExamples, levels, query]);
+
+  const toggleLevel = (level: CefrLevel) => {
+    setLevels((current) => current.includes(level) ? current.filter((item) => item !== level) : [...current, level]);
+  };
 
   if (!allExamples) return <LoadingSkeleton height="12rem" />;
 
@@ -35,15 +40,26 @@ export function ExampleLibraryPage({ basePath = '/student' }: { basePath?: strin
     <>
       <PageHeader title={t('examples.libraryTitle')} />
 
-      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginBottom: 'var(--space-5)' }}>
-        <select className="select-control" style={{ width: 'auto' }} value={level} onChange={(e) => setLevel(e.target.value as CefrLevel | 'all')} aria-label={t('catalog.levelFilter')}>
-          <option value="all">{t('common.all')} — {t('catalog.levelFilter')}</option>
-          {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
-        </select>
-        <select className="select-control" style={{ width: 'auto' }} value={band} onChange={(e) => setBand(e.target.value as PerformanceBand | 'all')} aria-label={t('examples.performanceFilter')}>
-          <option value="all">{t('common.all')} — {t('examples.performanceFilter')}</option>
-          {BANDS.map((b) => <option key={b} value={b}>{t(`performanceBand.${b}`)}</option>)}
-        </select>
+      <div className="library-filter-bar">
+        <div className="input-with-action library-search">
+          <input
+            className="input-control"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('catalog.searchPlaceholder')}
+            aria-label={t('common.search')}
+          />
+          <span className="input-with-action__action" style={{ pointerEvents: 'none' }}><Search size={16} aria-hidden="true" /></span>
+        </div>
+        <fieldset className="level-checkbox-filter">
+          <legend className="field__hint">{t('catalog.levelFilter')}</legend>
+          {LEVELS.map((level) => (
+            <label key={level} className="level-checkbox-filter__item">
+              <input type="checkbox" checked={levels.includes(level)} onChange={() => toggleLevel(level)} />
+              <span>{level}</span>
+            </label>
+          ))}
+        </fieldset>
       </div>
 
       {examples.length === 0 ? (
@@ -62,7 +78,6 @@ export function ExampleLibraryPage({ basePath = '/student' }: { basePath?: strin
                   <WritingTypeBadge writingTypeId={example.writingTypeId} />
                   <CefrLevelBadge level={example.level} />
                 </div>
-                <span className="badge badge--primary">{t(`performanceBand.${example.performanceBand}`)}</span>
               </div>
               <p className="catalog-card__title">{example.title}</p>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{example.overallScore}/100</p>

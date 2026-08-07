@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import { findErrorCategory } from '../../mock/errorCategories';
 import type { Assignment, StudentProfile, Submission, TeacherProfile, WritingAnnotation } from '../../types/entities';
@@ -34,6 +34,8 @@ export function TeacherSubmissionReviewPage() {
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<WritingAnnotation | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [publishedNow, setPublishedNow] = useState(false);
 
   const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
   const [assignment, setAssignment] = useState<Assignment | undefined>(undefined);
@@ -64,6 +66,7 @@ export function TeacherSubmissionReviewPage() {
   if (submission.isPractice) return <Navigate to="/teacher/assignments" replace />;
 
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;
+  const alreadyPublished = submission.status === 'result_ready' && submission.scoreVisibleToStudent;
 
   const handleOverride = async (criterionId: string, newScore: number, reason: string) => {
     await applyTeacherOverride({ submissionId: submission.id, criterionId, newScore, reason, teacherId: teacher.id, teacherName: teacher.displayName });
@@ -71,8 +74,15 @@ export function TeacherSubmissionReviewPage() {
   };
 
   const handlePublish = async () => {
-    await publishTeacherReview(submission.id, feedback, teacher.id);
-    reload();
+    if (alreadyPublished || publishing) return;
+    setPublishing(true);
+    try {
+      await publishTeacherReview(submission.id, feedback, teacher.id);
+      setPublishedNow(true);
+      reload();
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const handleSaveDraft = async () => {
@@ -211,10 +221,18 @@ export function TeacherSubmissionReviewPage() {
           onChange={(e) => setFeedback(e.target.value)}
           placeholder={t('teacher.review.feedbackPlaceholder')}
         />
-        <p className="field__hint">{submission.scoreVisibleToStudent && submission.status === 'result_ready' ? t('teacher.review.publishedNote') : t('teacher.review.draftNote')}</p>
+        <p className="field__hint">{alreadyPublished ? t('teacher.review.publishedNote') : t('teacher.review.draftNote')}</p>
+        {(publishedNow || alreadyPublished) && (
+          <div className="publish-success-notice" role="status">
+            <CheckCircle2 size={17} aria-hidden="true" />
+            <span>{t('teacher.review.publishedNote')}</span>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          <button type="button" className="btn btn--secondary" onClick={handleSaveDraft}>{t('teacher.review.saveDraft')}</button>
-          <button type="button" className="btn btn--primary" onClick={handlePublish}>{t('teacher.review.publish')}</button>
+          <button type="button" className="btn btn--secondary" onClick={handleSaveDraft} disabled={alreadyPublished}>{t('teacher.review.saveDraft')}</button>
+          <button type="button" className="btn btn--primary" onClick={handlePublish} disabled={alreadyPublished || publishing}>
+            {alreadyPublished ? t('submissionStatus.result_ready') : publishing ? t('common.loading') : t('teacher.review.publish')}
+          </button>
         </div>
       </section>
 

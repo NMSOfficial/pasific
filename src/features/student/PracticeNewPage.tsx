@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import { WRITING_TYPES } from '../../mock/writingTypes';
 import type { CatalogTopic, CefrLevel, StudentProfile, WritingTypeId } from '../../types/entities';
@@ -27,9 +28,7 @@ export function PracticeNewPage() {
 
   useEffect(() => { fetchVisibleCatalogForSchool(student.schoolId).then(setCatalog); }, [student.schoolId]);
 
-  // Filters only narrow the list below — they never force a single match,
-  // so the student can always see and pick from every topic in the
-  // catalog, not just the one that happens to match both filters at once.
+  const [query, setQuery] = useState('');
   const [writingType, setWritingType] = useState<WritingTypeId | 'all'>('all');
   const [level, setLevel] = useState<CefrLevel | 'all'>('all');
   const [topicId, setTopicId] = useState<string | undefined>(preselectedTopicId);
@@ -39,10 +38,12 @@ export function PracticeNewPage() {
 
   const availableTopics = useMemo(() => {
     if (!catalog) return [];
+    const normalizedQuery = query.trim().toLocaleLowerCase();
     return catalog
       .filter((topic) => writingType === 'all' || topic.writingTypeId === writingType)
-      .filter((topic) => level === 'all' || topic.level === level);
-  }, [catalog, writingType, level]);
+      .filter((topic) => level === 'all' || topic.level === level)
+      .filter((topic) => !normalizedQuery || topic.title.toLocaleLowerCase().includes(normalizedQuery) || topic.prompt.toLocaleLowerCase().includes(normalizedQuery) || topic.tags.some((tag) => tag.toLocaleLowerCase().includes(normalizedQuery)));
+  }, [catalog, writingType, level, query]);
 
   const selectedTopic = catalog?.find((topic) => topic.id === topicId);
 
@@ -51,24 +52,38 @@ export function PracticeNewPage() {
   const handleStart = async () => {
     if (!selectedTopic) return;
     setStarting(true);
-    const submission = await createDraftSubmission({
-      isPractice: true,
-      studentId: student.id,
-      schoolId: student.schoolId,
-      writingTypeId: selectedTopic.writingTypeId,
-      level: selectedTopic.level,
-      topicTitle: selectedTopic.title,
-    });
-    navigate(`/student/practice/${submission.id}/write`, {
-      state: { topicId: selectedTopic.id, timerMinutes: timerEnabled ? timerMinutes : undefined },
-    });
+    try {
+      const submission = await createDraftSubmission({
+        isPractice: true,
+        studentId: student.id,
+        schoolId: student.schoolId,
+        writingTypeId: selectedTopic.writingTypeId,
+        level: selectedTopic.level,
+        topicTitle: selectedTopic.title,
+      });
+      const practiceState = { topicId: selectedTopic.id, timerMinutes: timerEnabled ? timerMinutes : undefined };
+      sessionStorage.setItem(`pasific.practice.${submission.id}`, JSON.stringify(practiceState));
+      navigate(`/student/practice/${submission.id}/write`, { state: practiceState });
+    } finally {
+      setStarting(false);
+    }
   };
 
   return (
-    <>
+    <div className="practice-new-page">
       <PageHeader title={t('practice.newTitle')} />
 
       <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', marginBottom: 'var(--space-5)' }}>
+        <div className="input-with-action" style={{ minWidth: '16rem', flex: '1 1 18rem', maxWidth: '28rem' }}>
+          <input
+            className="input-control"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('catalog.searchPlaceholder')}
+            aria-label={t('common.search')}
+          />
+          <span className="input-with-action__action" style={{ pointerEvents: 'none' }}><Search size={16} aria-hidden="true" /></span>
+        </div>
         <select className="select-control" style={{ width: 'auto' }} value={writingType} onChange={(e) => setWritingType(e.target.value as WritingTypeId | 'all')} aria-label={t('practice.writingType')}>
           <option value="all">{t('common.all')} — {t('practice.writingType')}</option>
           {WRITING_TYPES.map((wt) => <option key={wt.id} value={wt.id}>{t(wt.labelKey)}</option>)}
@@ -129,11 +144,13 @@ export function PracticeNewPage() {
             />
           )}
         </div>
+      </div>
 
+      <div className="practice-start-dock">
         <button type="button" className="btn btn--primary btn--lg" disabled={!selectedTopic || starting} onClick={handleStart}>
-          {t('practice.start')}
+          {starting ? t('common.loading') : t('practice.start')}
         </button>
       </div>
-    </>
+    </div>
   );
 }

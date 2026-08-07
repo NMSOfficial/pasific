@@ -37,7 +37,7 @@ export function TopHeader({ onOpenMobileMenu }: { onOpenMobileMenu?: () => void 
     <header className="top-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
         {onOpenMobileMenu && (
-          <button type="button" className="icon-btn" onClick={onOpenMobileMenu} aria-label={t('a11y.openMenu')}>
+          <button type="button" className="icon-btn mobile-only" onClick={onOpenMobileMenu} aria-label={t('a11y.openMenu')}>
             <Menu size={20} aria-hidden="true" />
           </button>
         )}

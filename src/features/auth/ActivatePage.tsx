@@ -21,7 +21,7 @@ interface ValidatedCode {
 }
 
 export function ActivatePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
@@ -32,6 +32,7 @@ export function ActivatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [validatedCode, setValidatedCode] = useState<ValidatedCode | null>(null);
 
+  const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -40,6 +41,7 @@ export function ActivatePage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const fullNameLabel = i18n.resolvedLanguage?.startsWith('tr') ? 'Ad Soyad' : 'Full name';
 
   const handleValidateCode = async (e: FormEvent) => {
     e.preventDefault();
@@ -74,7 +76,9 @@ export function ActivatePage() {
     if (!validatedCode) return;
     const errors: Record<string, string> = {};
 
+    const trimmedDisplayName = displayName.trim().replace(/\s+/g, ' ');
     const trimmedUsername = username.trim();
+    if (trimmedDisplayName.length < 2) errors.displayName = t('common.required');
     if (!trimmedUsername) errors.username = t('common.required');
 
     if (!PASSWORD_RE.test(password)) errors.password = t('auth.activate.passwordWeak');
@@ -112,7 +116,7 @@ export function ActivatePage() {
     const { error: claimError } = await supabase.rpc('claim_activation_code', {
       p_code: validatedCode.code,
       p_username: trimmedUsername,
-      p_display_name: trimmedUsername,
+      p_display_name: trimmedDisplayName,
       p_email: email.trim(),
       p_phone: phone.trim(),
     });
@@ -186,6 +190,21 @@ export function ActivatePage() {
             {t('auth.activate.linkedTo')} <strong>{validatedCode.schoolName}</strong>{validatedCode.className ? ` — ${validatedCode.className}` : ''}
           </div>
           <form className="auth-form" onSubmit={handleCreateAccount} noValidate>
+            <div className="field">
+              <label className="field__label" htmlFor="display-name">{fullNameLabel}</label>
+              <input
+                id="display-name"
+                className={`input-control ${fieldErrors.displayName ? 'has-error' : ''}`}
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                autoComplete="name"
+                aria-invalid={!!fieldErrors.displayName}
+                aria-describedby={fieldErrors.displayName ? 'display-name-error' : undefined}
+                required
+              />
+              {fieldErrors.displayName && <p id="display-name-error" className="field__error" role="alert"><AlertCircle size={14} aria-hidden="true" />{fieldErrors.displayName}</p>}
+            </div>
+
             <div className="field">
               <label className="field__label" htmlFor="new-username">{t('auth.activate.chooseUsername')}</label>
               <input

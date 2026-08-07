@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
-import { Maximize2, Minimize2, CheckCircle2, HelpCircle } from 'lucide-react';
+import { Maximize2, Minimize2, CheckCircle2, HelpCircle, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../state/AuthContext';
 import type { CatalogTopic, StudentProfile, Submission } from '../../types/entities';
 import { PageHeader } from '../../components/PageHeader';
@@ -12,7 +12,7 @@ import { ConfirmationDialog } from '../../components/ConfirmationDialog';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { useAutosave } from '../../utils/useAutosave';
 import { formatDateTime } from '../../utils/format';
-import { fetchCatalogTopic } from '../../services/contentData';
+import { fetchCatalogTopic, fetchVisibleCatalogForSchool } from '../../services/contentData';
 import { fetchSubmission, saveSubmissionDraft, submitSubmission } from '../../services/submissionData';
 
 const GUIDED_QUESTIONS = [
@@ -22,14 +22,28 @@ const GUIDED_QUESTIONS = [
   'Is there a more precise word you could use here instead of a very general one?',
 ];
 
+interface PracticeNavigationState {
+  topicId?: string;
+  timerMinutes?: number;
+}
+
+function readStoredPracticeState(submissionId: string): PracticeNavigationState | null {
+  try {
+    const raw = sessionStorage.getItem(`pasific.practice.${submissionId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PracticeNavigationState;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function PracticeWritingPage() {
   const { t, i18n } = useTranslation();
   const { submissionId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
   const student = user as StudentProfile;
-
-  const navState = location.state as { topicId?: string; timerMinutes?: number } | null;
 
   const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
   const [topic, setTopic] = useState<CatalogTopic | undefined>(undefined);
@@ -38,16 +52,39 @@ export function PracticeWritingPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [integrityNotice, setIntegrityNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!submissionId) return;
-    fetchSubmission(submissionId).then((sub) => {
+    const routeState = location.state as PracticeNavigationState | null;
+    const practiceState = routeState ?? readStoredPracticeState(submissionId);
+
+    fetchSubmission(submissionId).then(async (sub) => {
       setSubmission(sub);
       setText(sub?.text ?? '');
+      if (!sub) return;
+
+      if (practiceState?.topicId) {
+        const found = await fetchCatalogTopic(practiceState.topicId);
+        if (found) {
+          setTopic(found);
+          sessionStorage.setItem(`pasific.practice.${submissionId}`, JSON.stringify(practiceState));
+          return;
+        }
+      }
+
+      const catalog = await fetchVisibleCatalogForSchool(student.schoolId);
+      const fallbackTopic = catalog.find((candidate) =>
+        candidate.title === sub.topicTitle
+        && candidate.writingTypeId === sub.writingTypeId
+        && candidate.level === sub.level,
+      );
+      if (fallbackTopic) {
+        setTopic(fallbackTopic);
+        sessionStorage.setItem(`pasific.practice.${submissionId}`, JSON.stringify({ topicId: fallbackTopic.id, timerMinutes: practiceState?.timerMinutes }));
+      }
     });
-    if (navState?.topicId) fetchCatalogTopic(navState.topicId).then((t2) => setTopic(t2 ?? undefined));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submissionId]);
+  }, [submissionId, location.state, student.schoolId]);
 
   const { status, lastSavedAt } = useAutosave(text, (value) => { if (submission) void saveSubmissionDraft(submission.id, value); });
 
@@ -75,11 +112,35 @@ export function PracticeWritingPage() {
     await saveSubmissionDraft(submission.id, text);
     setConfirmOpen(false);
     setJustSubmitted(true);
+    sessionStorage.removeItem(`pasific.practice.${submission.id}`);
     void submitSubmission(submission.id);
   };
 
   const askForHint = () => {
     setHint(GUIDED_QUESTIONS[Math.floor(Math.random() * GUIDED_QUESTIONS.length)]);
+  };
+
+  const rejectExternalInsertion = () => {
+    setIntegrityNotice(i18n.resolvedLanguage?.startsWith('tr')
+      ? 'Yapıştırma ve dışarıdan toplu metin ekleme bu yazma alanında kapalıdır.'
+      : 'Paste and bulk external text insertion are disabled in this writing area.');
+  };
+
+  const handleBeforeInput = (event: FormEvent<HTMLTextAreaElement>) => {
+    const inputType = (event.nativeEvent as InputEvent).inputType;
+    if (inputType === 'insertFromPaste' || inputType === 'insertFromDrop' || inputType === 'insertFromYank') {
+      event.preventDefault();
+      rejectExternalInsertion();
+    }
+  };
+
+  const handleTextChange = (nextText: string) => {
+    if (nextText.length - text.length > 32) {
+      rejectExternalInsertion();
+      return;
+    }
+    setIntegrityNotice(null);
+    setText(nextText);
   };
 
   return (
@@ -127,13 +188,24 @@ export function PracticeWritingPage() {
             </div>
           </div>
 
+          {integrityNotice && (
+            <div className="writing-integrity-notice" role="alert">
+              <ShieldAlert size={16} aria-hidden="true" />
+              <span>{integrityNotice}</span>
+            </div>
+          )}
+
           <label htmlFor="practice-textarea" className="visually-hidden">{submission.topicTitle}</label>
           <textarea
             id="practice-textarea"
             className="writing-editor__textarea"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onBeforeInput={handleBeforeInput}
+            onPaste={(event) => { event.preventDefault(); rejectExternalInsertion(); }}
+            onDrop={(event) => { event.preventDefault(); rejectExternalInsertion(); }}
+            onChange={(event) => handleTextChange(event.target.value)}
             placeholder={t('editor.placeholder')}
+            autoComplete="off"
             style={fullscreen ? { minHeight: 0 } : undefined}
           />
 

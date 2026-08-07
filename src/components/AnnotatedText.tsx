@@ -8,30 +8,64 @@ type FilterValue = 'all' | ErrorSeverity | ErrorCategoryGroup;
 
 const CATEGORY_GROUPS: ErrorCategoryGroup[] = ['grammar', 'vocabulary', 'organisation', 'task_genre'];
 
-interface Match {
+interface AnnotationMatch {
+  kind: 'annotation';
   annotation: WritingAnnotation;
   start: number;
   end: number;
 }
 
-function locateAnnotations(text: string, annotations: WritingAnnotation[]): Match[] {
-  const matches: Match[] = [];
+export interface TextEvidenceHighlight {
+  id: string;
+  quotedText: string;
+  label: string;
+}
+
+interface EvidenceMatch {
+  kind: 'evidence';
+  evidence: TextEvidenceHighlight;
+  start: number;
+  end: number;
+}
+
+type TextMatch = AnnotationMatch | EvidenceMatch;
+
+function locateAnnotations(text: string, annotations: WritingAnnotation[]): AnnotationMatch[] {
+  const matches: AnnotationMatch[] = [];
   for (const ann of annotations) {
     if (!ann.quotedText) continue;
     const idx = text.indexOf(ann.quotedText);
     if (idx === -1) continue;
-    matches.push({ annotation: ann, start: idx, end: idx + ann.quotedText.length });
+    matches.push({ kind: 'annotation', annotation: ann, start: idx, end: idx + ann.quotedText.length });
   }
   matches.sort((a, b) => a.start - b.start);
-  const nonOverlapping: Match[] = [];
+  const nonOverlapping: AnnotationMatch[] = [];
   let lastEnd = -1;
-  for (const m of matches) {
-    if (m.start >= lastEnd) {
-      nonOverlapping.push(m);
-      lastEnd = m.end;
+  for (const match of matches) {
+    if (match.start >= lastEnd) {
+      nonOverlapping.push(match);
+      lastEnd = match.end;
     }
   }
   return nonOverlapping;
+}
+
+function locateEvidence(text: string, highlights: TextEvidenceHighlight[], occupied: AnnotationMatch[]): EvidenceMatch[] {
+  const matches: EvidenceMatch[] = [];
+  for (const evidence of highlights) {
+    let quote = evidence.quotedText.trim();
+    if (!quote) continue;
+    let idx = text.indexOf(quote);
+    if (idx === -1 && quote.includes('...')) {
+      quote = quote.split('...')[0]?.trim() ?? '';
+      if (quote.length >= 12) idx = text.indexOf(quote);
+    }
+    if (idx === -1 || !quote) continue;
+    const candidate: EvidenceMatch = { kind: 'evidence', evidence: { ...evidence, quotedText: quote }, start: idx, end: idx + quote.length };
+    const overlaps = [...occupied, ...matches].some((match) => candidate.start < match.end && candidate.end > match.start);
+    if (!overlaps) matches.push(candidate);
+  }
+  return matches.sort((a, b) => a.start - b.start);
 }
 
 interface AnnotatedTextProps {
@@ -40,9 +74,10 @@ interface AnnotatedTextProps {
   selectedId?: string;
   onSelect: (annotation: WritingAnnotation) => void;
   categoryGroupOf: (categoryId: string) => ErrorCategoryGroup | undefined;
+  evidenceHighlights?: TextEvidenceHighlight[];
 }
 
-export function AnnotatedText({ text, annotations, selectedId, onSelect, categoryGroupOf }: AnnotatedTextProps) {
+export function AnnotatedText({ text, annotations, selectedId, onSelect, categoryGroupOf, evidenceHighlights = [] }: AnnotatedTextProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<FilterValue>('all');
 
@@ -52,14 +87,18 @@ export function AnnotatedText({ text, annotations, selectedId, onSelect, categor
     return annotations.filter((a) => categoryGroupOf(a.categoryId) === filter);
   }, [annotations, filter, categoryGroupOf]);
 
-  const matches = useMemo(() => locateAnnotations(text, filteredAnnotations), [text, filteredAnnotations]);
+  const matches = useMemo(() => {
+    const annotationMatches = locateAnnotations(text, filteredAnnotations);
+    const evidenceMatches = filter === 'all' ? locateEvidence(text, evidenceHighlights, annotationMatches) : [];
+    return [...annotationMatches, ...evidenceMatches].sort((a, b) => a.start - b.start);
+  }, [text, filteredAnnotations, evidenceHighlights, filter]);
 
-  const segments: { text: string; match?: Match }[] = [];
+  const segments: { text: string; match?: TextMatch }[] = [];
   let cursor = 0;
-  for (const m of matches) {
-    if (m.start > cursor) segments.push({ text: text.slice(cursor, m.start) });
-    segments.push({ text: text.slice(m.start, m.end), match: m });
-    cursor = m.end;
+  for (const match of matches) {
+    if (match.start > cursor) segments.push({ text: text.slice(cursor, match.start) });
+    segments.push({ text: text.slice(match.start, match.end), match });
+    cursor = match.end;
   }
   if (cursor < text.length) segments.push({ text: text.slice(cursor) });
 
@@ -84,15 +123,21 @@ export function AnnotatedText({ text, annotations, selectedId, onSelect, categor
       <p className="field__hint" style={{ marginBottom: 'var(--space-3)' }}>{t('annotatedText.selectAnnotationHint')}</p>
 
       <div className="annotated-text">
-        {segments.map((seg, i) =>
-          seg.match ? (
-            <ErrorMarker key={i} annotation={seg.match.annotation} active={selectedId === seg.match.annotation.id} onSelect={onSelect}>
-              {seg.text}
-            </ErrorMarker>
-          ) : (
-            <span key={i}>{seg.text}</span>
-          )
-        )}
+        {segments.map((segment, index) => {
+          if (!segment.match) return <span key={index}>{segment.text}</span>;
+          if (segment.match.kind === 'annotation') {
+            return (
+              <ErrorMarker key={index} annotation={segment.match.annotation} active={selectedId === segment.match.annotation.id} onSelect={onSelect}>
+                {segment.text}
+              </ErrorMarker>
+            );
+          }
+          return (
+            <mark key={index} className="rubric-evidence-highlight" title={segment.match.evidence.label}>
+              {segment.text}
+            </mark>
+          );
+        })}
       </div>
     </div>
   );

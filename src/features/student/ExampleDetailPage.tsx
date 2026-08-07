@@ -9,7 +9,7 @@ import { CefrLevelBadge } from '../../components/CefrLevelBadge';
 import { WritingTypeBadge } from '../../components/WritingTypeBadge';
 import { ScoreRing } from '../../components/ScoreRing';
 import { CriterionScoreCard } from '../../components/CriterionScoreCard';
-import { AnnotatedText } from '../../components/AnnotatedText';
+import { AnnotatedText, type TextEvidenceHighlight } from '../../components/AnnotatedText';
 import { ErrorDetailPanel } from '../../components/ErrorDetailPanel';
 import { FeedbackTabs } from '../../components/FeedbackTabs';
 import { MobileBottomSheet } from '../../components/MobileBottomSheet';
@@ -32,6 +32,13 @@ export function ExampleDetailPage({ basePath = '/student' }: { basePath?: string
   if (example === undefined) return <LoadingSkeleton height="12rem" />;
 
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;
+  const evidenceHighlights: TextEvidenceHighlight[] = example.criterionScores
+    .filter((criterion) => !!criterion.evidenceQuote?.trim())
+    .map((criterion) => ({
+      id: `evidence-${criterion.criterionId}`,
+      quotedText: criterion.evidenceQuote!,
+      label: t(`rubric.criterion.${criterion.criterionKey}.name`),
+    }));
 
   return (
     <>
@@ -43,7 +50,6 @@ export function ExampleDetailPage({ basePath = '/student' }: { basePath?: string
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <WritingTypeBadge writingTypeId={example.writingTypeId} />
             <CefrLevelBadge level={example.level} />
-            <span className="badge badge--primary">{t(`performanceBand.${example.performanceBand}`)}</span>
           </div>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text-muted)' }}>{example.teacherExplanation}</p>
         </div>
@@ -83,7 +89,14 @@ export function ExampleDetailPage({ basePath = '/student' }: { basePath?: string
             content: (
               <div className="writing-editor-layout">
                 <div className="writing-editor-layout__main card card--padded">
-                  <AnnotatedText text={example.text} annotations={example.annotations} selectedId={selected?.id} onSelect={setSelected} categoryGroupOf={categoryGroupOf} />
+                  <AnnotatedText
+                    text={example.text}
+                    annotations={example.annotations}
+                    evidenceHighlights={evidenceHighlights}
+                    selectedId={selected?.id}
+                    onSelect={setSelected}
+                    categoryGroupOf={categoryGroupOf}
+                  />
                 </div>
                 {!isMobile && (
                   <div className="writing-editor-layout__prompt card card--padded">
