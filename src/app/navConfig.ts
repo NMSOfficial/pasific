@@ -1,6 +1,6 @@
 import {
-  Home, ClipboardList, PenSquare, Library, BookOpen, FolderClock, UserCircle,
-  LayoutDashboard, Users, FileStack, BarChart3, School, UsersRound, Settings, Menu,
+  Home, ClipboardList, PenSquare, Library, BookOpen, FolderClock, UserCircle, ClipboardCheck,
+  LayoutDashboard, Users, FileStack, BarChart3, School, UsersRound, Settings, Menu, ScanLine,
   Building2, ShieldCheck, KeyRound, BookMarked, Type, Gauge, ScrollText, SlidersHorizontal,
   type LucideIcon,
 } from 'lucide-react';
@@ -15,6 +15,7 @@ export interface NavItem {
 export const STUDENT_SIDEBAR_NAV: NavItem[] = [
   { key: 'home', to: '/student/home', icon: Home, labelKey: 'nav.student.home' },
   { key: 'assignments', to: '/student/assignments', icon: ClipboardList, labelKey: 'nav.student.assignments' },
+  { key: 'examResults', to: '/student/exam-results', icon: ClipboardCheck, labelKey: 'Sınav Sonuçları' },
   { key: 'practice', to: '/student/practice', icon: PenSquare, labelKey: 'nav.student.practice' },
   { key: 'catalog', to: '/student/catalog', icon: Library, labelKey: 'nav.student.catalog' },
   { key: 'examples', to: '/student/examples', icon: BookOpen, labelKey: 'nav.student.examples' },
@@ -34,6 +35,7 @@ export const TEACHER_SIDEBAR_NAV: NavItem[] = [
   { key: 'dashboard', to: '/teacher/dashboard', icon: LayoutDashboard, labelKey: 'nav.teacher.dashboard' },
   { key: 'classes', to: '/teacher/classes', icon: Users, labelKey: 'nav.teacher.classes' },
   { key: 'assignments', to: '/teacher/assignments', icon: FileStack, labelKey: 'nav.teacher.assignments' },
+  { key: 'assessmentHub', to: '/teacher/assessment-hub', icon: ScanLine, labelKey: 'Belge & Sınav' },
   { key: 'catalog', to: '/teacher/catalog', icon: Library, labelKey: 'nav.teacher.catalog' },
   { key: 'examples', to: '/teacher/examples', icon: BookOpen, labelKey: 'nav.teacher.examples' },
   { key: 'activationCodes', to: '/teacher/activation-codes', icon: KeyRound, labelKey: 'nav.teacher.activationCodes' },
