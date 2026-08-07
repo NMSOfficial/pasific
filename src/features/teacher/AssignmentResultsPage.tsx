@@ -8,7 +8,7 @@ import { SubmissionStatusBadge } from '../../components/StatusBadge';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { formatDate } from '../../utils/format';
-import { exportClassReportPdf } from '../../utils/pdf';
+import { exportAssignmentReportPdf } from '../../utils/assignmentReportPdf';
 import { exportXlsx } from '../../utils/excel';
 import { formatScaledScore, scaleWritingScore } from '../../utils/scoringScale';
 import { fetchAssignment } from '../../services/assignmentData';
@@ -66,14 +66,13 @@ export function AssignmentResultsPage() {
     submittedAt: sub?.submittedAt ? formatDate(sub.submittedAt, i18n.resolvedLanguage ?? 'tr') : '',
   }));
 
-  const exportPdf = () => exportClassReportPdf({
+  const exportPdf = () => exportAssignmentReportPdf({
     className: classLabel,
     schoolName,
     assignmentTitle: assignment.title,
-    locale: i18n.resolvedLanguage ?? 'tr',
-    rows: reportRows.map((row) => ({ studentName: row.studentName, status: row.status, score: row.score })),
-    averageScore: avgScore,
     maxScore: maxPoints,
+    rows: reportRows,
+    averageScore: avgScore,
   });
 
   const exportExcel = () => exportXlsx({
