@@ -139,7 +139,29 @@ function buildPrompt(input: GradeRequest, levelDescriptor?: string): { systemIns
 
   const systemInstruction = `You are an expert CEFR-aligned English writing assessor for an EFL education platform. You grade a student's essay against a weighted rubric and flag concrete errors.
 
-Return a single JSON object matching the supplied response schema.
+Return ONLY one JSON object. Do not wrap it in Markdown or code fences. The exact logical shape is:
+{
+  "criterionScores": [
+    {
+      "criterionId": "criterion id from the list below",
+      "score": 0,
+      "explanation": "English explanation",
+      "evidenceQuote": "optional exact quote from the essay",
+      "strongAspects": ["English strength"],
+      "developmentAreas": ["English improvement area"]
+    }
+  ],
+  "annotations": [
+    {
+      "quotedText": "exact text copied from the essay",
+      "severity": "critical|mistake|inaccuracy|info",
+      "categoryId": "one allowed category id",
+      "explanation": "English explanation",
+      "hint": "optional English hint",
+      "suggestedCorrection": "optional correction"
+    }
+  ]
+}
 
 Rules:
 - Include exactly one entry in criterionScores for every criterion id listed below, no more, no fewer.
@@ -175,14 +197,19 @@ async function callGemini(systemInstruction: string, userContent: string, apiKey
     const combinedUserContent = IS_GEMMA_MODEL
       ? `${systemInstruction}\n\n${userContent}`
       : userContent;
+
     const requestBody = {
       contents: [{ role: 'user', parts: [{ text: combinedUserContent }] }],
       ...(IS_GEMMA_MODEL ? {} : { systemInstruction: { parts: [{ text: systemInstruction }] } }),
       generationConfig: {
         maxOutputTokens: 4096,
-        ...(IS_GEMMA_MODEL ? {} : { thinkingConfig: { thinkingLevel: 'minimal' } }),
-        responseMimeType: 'application/json',
-        responseSchema: MODEL_OUTPUT_SCHEMA,
+        thinkingConfig: { thinkingLevel: 'minimal' },
+        ...(IS_GEMMA_MODEL
+          ? {}
+          : {
+              responseMimeType: 'application/json',
+              responseSchema: MODEL_OUTPUT_SCHEMA,
+            }),
       },
     };
 
@@ -239,11 +266,17 @@ function validateModelOutput(output: ModelOutput, criteria: CriterionInput[]): v
       true,
     );
   }
+
+  const seenCriteria = new Set<string>();
   for (const cs of output.criterionScores) {
     const criterion = criteriaById.get(cs.criterionId);
     if (!criterion) {
       throw new GradingError(`Unknown criterionId "${cs.criterionId}" in model output`, true);
     }
+    if (seenCriteria.has(cs.criterionId)) {
+      throw new GradingError(`Duplicate criterionId "${cs.criterionId}" in model output`, true);
+    }
+    seenCriteria.add(cs.criterionId);
     if (cs.score < 0 || cs.score > criterion.maxScore) {
       throw new GradingError(
         `Score ${cs.score} out of range for criterion "${cs.criterionId}" (max ${criterion.maxScore})`,
@@ -251,6 +284,7 @@ function validateModelOutput(output: ModelOutput, criteria: CriterionInput[]): v
       );
     }
   }
+
   for (const a of output.annotations) {
     if (!CATEGORY_IDS.has(a.categoryId)) {
       throw new GradingError(`Unknown categoryId "${a.categoryId}" in model output`, true);
@@ -327,7 +361,7 @@ async function requestGrading(input: GradeRequest, apiKey: string, attempt: numb
   const effectiveSystemInstruction =
     attempt === 0
       ? systemInstruction
-      : `${systemInstruction}\n\nIMPORTANT: your previous response did not satisfy the required schema. Return only a schema-compliant result.`;
+      : `${systemInstruction}\n\nIMPORTANT: your previous response was invalid. Return only valid JSON matching the exact shape above.`;
 
   const raw = await callGemini(effectiveSystemInstruction, userContent, apiKey);
 
