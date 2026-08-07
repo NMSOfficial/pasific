@@ -26,6 +26,7 @@ async function mapAssignment(row: Record<string, unknown>): Promise<Assignment> 
     supabase.from('assignment_classes').select('class_id').eq('assignment_id', row.id),
   ]);
   const rubric = await fetchRubric(row.rubric_id as string, (rubricRow?.is_custom as boolean) ?? false);
+  const scoring = row.scoring_breakdown as { rubric?: number; vocabulary?: number; patterns?: number } | null;
 
   return {
     id: row.id as string,
@@ -42,6 +43,15 @@ async function mapAssignment(row: Record<string, unknown>): Promise<Assignment> 
     classIds: (classLinks ?? []).map((c) => c.class_id as string),
     instructions: (row.instructions as string | null) ?? undefined,
     referenceText: (row.reference_text as string | null) ?? undefined,
+    vocabularyRequirements: (row.vocabulary_requirements as string | null) ?? undefined,
+    patternRequirements: (row.pattern_requirements as string | null) ?? undefined,
+    maxPoints: Number(row.max_points ?? 100),
+    scoringBreakdown: {
+      rubric: Number(scoring?.rubric ?? 100),
+      vocabulary: Number(scoring?.vocabulary ?? 0),
+      patterns: Number(scoring?.patterns ?? 0),
+    },
+    sharedWithSchool: row.shared_with_school == null ? true : Boolean(row.shared_with_school),
     aiSupportMode: row.ai_support_mode as Assignment['aiSupportMode'],
     rubric,
     showAiScoreImmediately: row.show_ai_score_immediately as boolean,
