@@ -20,7 +20,8 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PdfExportButton } from '../../components/PdfExportButton';
 import { useIsMobile } from '../../utils/useIsMobile';
 import { formatDateTime } from '../../utils/format';
-import { exportSubmissionResultPdf } from '../../utils/pdf';
+import { exportScaledWritingResultPdf } from '../../utils/writingResultPdf';
+import { formatScaledScore, scaleWritingScore } from '../../utils/scoringScale';
 import { fetchAssignment } from '../../services/assignmentData';
 import { fetchSubmission, retryAiGrading } from '../../services/submissionData';
 
@@ -31,7 +32,6 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
   const student = user as StudentProfile;
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<WritingAnnotation | null>(null);
-
   const [submission, setSubmission] = useState<Submission | null | undefined>(undefined);
   const [assignment, setAssignment] = useState<Assignment | undefined>(undefined);
 
@@ -40,6 +40,7 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
     fetchSubmission(submissionId).then(async (sub) => {
       setSubmission(sub);
       if (sub?.assignmentId) setAssignment((await fetchAssignment(sub.assignmentId)) ?? undefined);
+      else setAssignment(undefined);
     });
   }, [submissionId]);
 
@@ -73,9 +74,7 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
         <div className="state-panel">
           <AlertCircle size={36} color="var(--color-error)" aria-hidden="true" />
           <p className="state-panel__title">{t('submissionStatus.gradingFailed')}</p>
-          <button type="button" className="btn btn--primary" onClick={async () => { await retryAiGrading(submission.id); reload(); }}>
-            {t('submissionStatus.retry')}
-          </button>
+          <button type="button" className="btn btn--primary" onClick={async () => { await retryAiGrading(submission.id); reload(); }}>{t('submissionStatus.retry')}</button>
           <Link to={backTo} className="btn btn--secondary">{backLabel}</Link>
         </div>
       </>
@@ -96,44 +95,37 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
     );
   }
 
+  const maxPoints = assignment?.maxPoints ?? 100;
+  const scaledFinal = scaleWritingScore(submission.finalScore ?? submission.aiScore ?? 0, maxPoints) ?? 0;
   const categoryGroupOf = (categoryId: string) => findErrorCategory(categoryId)?.group;
+  const criterionLabel = (key: string) => key === 'required_vocabulary'
+    ? ((i18n.resolvedLanguage ?? 'tr').startsWith('tr') ? 'Ünite / konu kelimeleri' : 'Required vocabulary usage')
+    : key === 'required_patterns'
+      ? ((i18n.resolvedLanguage ?? 'tr').startsWith('tr') ? 'Zorunlu yazma kalıpları' : 'Required writing patterns')
+      : t(`rubric.criterion.${key}.name`);
 
   const annotatedTab = submission.annotations.length === 0 ? (
     <EmptyState title={t('annotatedText.noAnnotations')} />
   ) : (
     <div className="writing-editor-layout">
       <div className="writing-editor-layout__main card card--padded">
-        <AnnotatedText
-          text={submission.text}
-          annotations={submission.annotations}
-          selectedId={selected?.id}
-          onSelect={setSelected}
-          categoryGroupOf={categoryGroupOf}
-        />
+        <AnnotatedText text={submission.text} annotations={submission.annotations} selectedId={selected?.id} onSelect={setSelected} categoryGroupOf={categoryGroupOf} />
       </div>
-      {!isMobile && (
-        <div className="writing-editor-layout__prompt card card--padded">
-          {selected ? <ErrorDetailPanel annotation={selected} /> : <p className="field__hint">{t('annotatedText.selectAnnotationHint')}</p>}
-        </div>
-      )}
+      {!isMobile && <div className="writing-editor-layout__prompt card card--padded">{selected ? <ErrorDetailPanel annotation={selected} /> : <p className="field__hint">{t('annotatedText.selectAnnotationHint')}</p>}</div>}
     </div>
   );
 
   const scoreTab = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
       {submission.usesCustomRubric && <p className="field__hint">{t('rubric.customRubricWarning')}</p>}
-      {submission.criterionScores.map((c) => (
-        <CriterionScoreCard key={c.criterionId} criterion={c} />
-      ))}
+      {submission.criterionScores.map((c) => <CriterionScoreCard key={c.criterionId} criterion={c} />)}
     </div>
   );
 
   const recommendationsTab = submission.studyRecommendations.length === 0 ? (
     <EmptyState title={t('states.empty.generic')} />
   ) : (
-    <div className="card-grid">
-      {submission.studyRecommendations.map((r) => <RecommendationCard key={r.id} recommendation={r} />)}
-    </div>
+    <div className="card-grid">{submission.studyRecommendations.map((r) => <RecommendationCard key={r.id} recommendation={r} />)}</div>
   );
 
   const feedbackTab = submission.teacherFeedback ? (
@@ -141,68 +133,51 @@ export function SubmissionResultPage({ portfolioContext = false }: { portfolioCo
       <p style={{ lineHeight: 'var(--leading-relaxed)' }}>{submission.teacherFeedback}</p>
       {submission.reviewedAt && <p className="field__hint" style={{ marginTop: 'var(--space-3)' }}>{formatDateTime(submission.reviewedAt, i18n.resolvedLanguage ?? 'tr')}</p>}
     </div>
-  ) : (
-    <EmptyState title={t('states.empty.generic')} />
-  );
+  ) : <EmptyState title={t('states.empty.generic')} />;
 
   return (
     <>
       <PageHeader
         title={assignment?.title ?? submission.topicTitle}
+        subtitle={assignment ? `${maxPoints} üzerinden puanlama` : undefined}
         actions={
           <>
-            {!submission.isPractice && (
-              <Link
-                to={assignment?.topicId ? `/student/practice/new?topicId=${assignment.topicId}` : '/student/practice/new'}
-                className="btn btn--secondary"
-              >
-                {t('editor.practiseAgain')}
-              </Link>
-            )}
-            <PdfExportButton
-              onExport={() => exportSubmissionResultPdf({
-                submission,
-                studentName: student.displayName,
-                assignmentTitle: assignment?.title,
-                locale: i18n.resolvedLanguage ?? 'tr',
-                criterionLabel: (c) => t(`rubric.criterion.${c.criterionKey}.name`),
-              })}
-            />
+            {!submission.isPractice && <Link to={assignment?.topicId ? `/student/practice/new?topicId=${assignment.topicId}` : '/student/practice/new'} className="btn btn--secondary">{t('editor.practiseAgain')}</Link>}
+            <PdfExportButton onExport={() => exportScaledWritingResultPdf({
+              submission,
+              studentName: student.displayName,
+              assignmentTitle: assignment?.title,
+              locale: i18n.resolvedLanguage ?? 'tr',
+              maxPoints,
+              criterionLabel: (criterion) => criterionLabel(criterion.criterionKey),
+            })} />
           </>
         }
       />
 
       <div className="card card--padded" style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-        <ScoreRing score={submission.finalScore ?? 0} />
+        <ScoreRing score={scaledFinal} maxScore={maxPoints} label={`${scaledFinal} / ${maxPoints}`} />
         <div style={{ flex: 1, minWidth: '16rem', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             <WritingTypeBadge writingTypeId={submission.writingTypeId} />
             <CefrLevelBadge level={submission.level} />
             {submission.teacherOverrides.length > 0 && <span className="badge badge--primary">{t('rubric.teacherFinalScore')}</span>}
           </div>
-          <p className="field__hint">
-            {formatDateTime(submission.submittedAt, i18n.resolvedLanguage ?? 'tr')} · {submission.wordCount} {t('common.words')}
-          </p>
-          {submission.teacherOverrides.length > 0 && submission.aiScore !== undefined && (
-            <p className="field__hint">{t('rubric.aiSuggestedScore')}: {submission.aiScore}</p>
-          )}
+          <p className="field__hint">{formatDateTime(submission.submittedAt, i18n.resolvedLanguage ?? 'tr')} · {submission.wordCount} {t('common.words')}</p>
+          {submission.teacherOverrides.length > 0 && submission.aiScore !== undefined && <p className="field__hint">{t('rubric.aiSuggestedScore')}: {formatScaledScore(submission.aiScore, maxPoints)}</p>}
+          {assignment?.vocabularyRequirements && <p className="field__hint"><strong>{criterionLabel('required_vocabulary')}:</strong> {assignment.vocabularyRequirements}</p>}
+          {assignment?.patternRequirements && <p className="field__hint"><strong>{criterionLabel('required_patterns')}:</strong> {assignment.patternRequirements}</p>}
         </div>
       </div>
 
-      <FeedbackTabs
-        tabs={[
-          { key: 'annotated', label: t('annotatedText.tabs.annotated'), content: annotatedTab },
-          { key: 'scores', label: t('annotatedText.tabs.scoreBreakdown'), content: scoreTab },
-          { key: 'recommendations', label: t('annotatedText.tabs.studyRecommendations'), content: recommendationsTab },
-          { key: 'feedback', label: t('annotatedText.tabs.teacherFeedback'), content: feedbackTab },
-        ]}
-      />
+      <FeedbackTabs tabs={[
+        { key: 'annotated', label: t('annotatedText.tabs.annotated'), content: annotatedTab },
+        { key: 'scores', label: t('annotatedText.tabs.scoreBreakdown'), content: scoreTab },
+        { key: 'recommendations', label: t('annotatedText.tabs.studyRecommendations'), content: recommendationsTab },
+        { key: 'feedback', label: t('annotatedText.tabs.teacherFeedback'), content: feedbackTab },
+      ]} />
 
-      {isMobile && (
-        <MobileBottomSheet open={!!selected} onClose={() => setSelected(null)} title={t('annotatedText.tabs.annotated')}>
-          {selected && <ErrorDetailPanel annotation={selected} />}
-        </MobileBottomSheet>
-      )}
+      {isMobile && <MobileBottomSheet open={!!selected} onClose={() => setSelected(null)} title={t('annotatedText.tabs.annotated')}>{selected && <ErrorDetailPanel annotation={selected} />}</MobileBottomSheet>}
     </>
   );
 }
