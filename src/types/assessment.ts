@@ -1,6 +1,6 @@
 import type { CefrLevel, WritingTypeId } from './entities';
 
-export type DocumentImportKind = 'writing' | 'exam_template' | 'exam_attempt';
+export type DocumentImportKind = 'writing' | 'exam_template' | 'exam_answer_key' | 'exam_attempt';
 export type DocumentSourceMode = 'camera' | 'gallery' | 'zip' | 'file' | 'cloud_url';
 export type DocumentOcrStatus = 'queued' | 'processing' | 'ready' | 'failed';
 export type DocumentReviewStatus = 'needs_match' | 'ready_for_grading' | 'teacher_review_pending' | 'approved' | 'returned';
@@ -69,6 +69,8 @@ export interface ExamDefinition {
   scoringNotes?: string;
   masterOcrText?: string;
   masterOcrMarkdown?: string;
+  answerKeyOcrText?: string;
+  answerKeyOcrMarkdown?: string;
   sharedWithSchool: boolean;
   feedbackVisibleDefault: boolean;
   status: 'draft' | 'ready' | 'archived';
