@@ -16,7 +16,7 @@ interface OcrInput {
   sourceUrl?: string;
 }
 
-type DocumentImportKind = 'writing' | 'exam_template' | 'exam_attempt';
+type DocumentImportKind = 'writing' | 'exam_template' | 'exam_answer_key' | 'exam_attempt';
 
 interface OcrPage {
   markdown?: string;
@@ -162,7 +162,7 @@ function buildOcrRequestBody(
     confidence_scores_granularity: 'page',
   };
 
-  if (kind === 'exam_template' || !withAnnotation) return base;
+  if (kind === 'exam_template' || kind === 'exam_answer_key' || !withAnnotation) return base;
 
   return {
     ...base,
@@ -230,7 +230,7 @@ async function runMistralOcr(input: OcrInput, apiKey: string, kind: DocumentImpo
       : { type: 'document_url', document_url: dataUrl };
   }
 
-  const wantsAnnotation = kind !== 'exam_template';
+  const wantsAnnotation = kind === 'writing' || kind === 'exam_attempt';
   let response = await sendMistralRequest(document, apiKey, kind, wantsAnnotation);
 
   if (response.status === 429 || response.status === 503) {
@@ -300,7 +300,7 @@ export async function processDocumentOcrSecure(
     });
     if (beginError) throw new Error(`document_ocr_begin_failed:${safeExternalMessage(beginError.message)}`);
     const kind = kindValue as DocumentImportKind;
-    if (!['writing', 'exam_template', 'exam_attempt'].includes(kind)) throw new Error('invalid_document_batch_kind');
+    if (!['writing', 'exam_template', 'exam_answer_key', 'exam_attempt'].includes(kind)) throw new Error('invalid_document_batch_kind');
     begun = true;
 
     const apiKey = await loadMistralKey(token, deps);
