@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowRight, CheckCircle2, FileCheck2, FilePlus2, KeyRound, ScanLine } from 'lucide-react';
+import { ArrowRight, CheckCircle2, FileCheck2, FilePlus2, KeyRound, ScanLine, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../components/PageHeader';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
@@ -88,12 +88,14 @@ export function TeacherExamListPage() {
           {exams.map((exam) => {
             const blankReady = Boolean(exam.masterOcrText);
             const keyReady = Boolean(exam.answerKeyOcrText);
+            const ownedByMe = exam.createdBy === teacher.id;
             return (
               <article className="card card--padded exam-definition-card" key={exam.id}>
                 <div className="exam-definition-card__header">
                   <div>
                     <div className="exam-definition-card__eyebrow">{exam.subject || 'Genel sınav'} · {exam.maxPoints} puan</div>
                     <h2>{exam.title}</h2>
+                    {!ownedByMe && <span className="exam-shared-label"><Share2 size={13} /> Okulda paylaşılan sınav</span>}
                   </div>
                   <span className={`badge ${blankReady ? 'badge--success' : 'badge--warning'}`}>{blankReady ? 'Hazır' : 'Kurulum eksik'}</span>
                 </div>
@@ -104,9 +106,9 @@ export function TeacherExamListPage() {
                 </div>
 
                 <div className="exam-definition-card__actions">
-                  <Link className="btn btn--secondary" to={`/teacher/exams/${exam.id}/setup`}>Sınavı düzenle</Link>
+                  {ownedByMe && <Link className="btn btn--secondary" to={`/teacher/exams/${exam.id}/setup`}>Sınavı düzenle</Link>}
                   <Link className={`btn btn--primary ${blankReady ? '' : 'is-disabled'}`} aria-disabled={!blankReady} onClick={(event) => { if (!blankReady) event.preventDefault(); }} to={`/teacher/exams/${exam.id}/grade`}>
-                    Öğrenci kağıtlarını puanla <ArrowRight size={16} />
+                    {ownedByMe ? 'Öğrenci kağıtlarını puanla' : 'Bu sınavı kullan'} <ArrowRight size={16} />
                   </Link>
                 </div>
               </article>
