@@ -45,16 +45,22 @@ begin
     raise exception 'Forbidden' using errcode = '42501';
   end if;
 
-  select a, r.is_custom
-  into v_assignment, v_uses_custom_rubric
+  select a.* into v_assignment
   from public.assignments a
-  join public.assignment_rubrics r on r.id = a.rubric_id
   where a.id = p_assignment_id
     and a.school_id = v_batch.school_id
     and a.status = 'published';
 
   if not found then
     raise exception 'assignment_not_found' using errcode = 'P0002';
+  end if;
+
+  select r.is_custom into v_uses_custom_rubric
+  from public.assignment_rubrics r
+  where r.id = v_assignment.rubric_id;
+
+  if not found then
+    raise exception 'assignment_rubric_not_found' using errcode = 'P0002';
   end if;
 
   if not exists (
@@ -112,7 +118,7 @@ begin
     v_item.ocr_text,
     case
       when length(trim(v_item.ocr_text)) = 0 then 0
-      else array_length(regexp_split_to_array(trim(v_item.ocr_text), '\\s+'), 1)
+      else array_length(regexp_split_to_array(trim(v_item.ocr_text), '\s+'), 1)
     end,
     'submitted',
     now(),
