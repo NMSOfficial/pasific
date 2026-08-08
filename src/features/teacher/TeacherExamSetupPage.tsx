@@ -5,7 +5,7 @@ import { DocumentImportControls } from '../../components/DocumentImportControls'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { PageHeader } from '../../components/PageHeader';
 import { useAuth } from '../../state/AuthContext';
-import type { DocumentImportItem, DocumentImportKind, DocumentSourceMode, ExamDefinition } from '../../types/assessment';
+import type { DocumentImportItem, DocumentSourceMode, ExamDefinition } from '../../types/assessment';
 import type { TeacherProfile } from '../../types/entities';
 import {
   createExamDefinition,
