@@ -11,13 +11,22 @@ import { PageHeader } from '../../components/PageHeader';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
 import { fetchVisibleCatalogForSchool } from '../../services/contentData';
 import { fetchTeacherClasses, type ClassMeta } from '../../services/teacherData';
-import {
-  adoptSharedAssignment,
-  createAdvancedWritingAssignment,
-  fetchSchoolSharedAssignments,
-} from '../../services/assessmentData';
+import { adoptSharedAssignment, fetchSchoolSharedAssignments } from '../../services/assessmentData';
+import { createAdvancedWritingAssignmentAtomic } from '../../services/advancedAssignmentData';
+import { fetchSchoolScopeOptions, type SchoolScopeOption } from '../../services/schoolScopeData';
 
 const QUICK_SCALES = [5, 10, 20, 50, 100];
+
+function distributeWeight(totalWeight: number, count: number): number[] {
+  const hundredths = Math.max(0, Math.round(totalWeight * 100));
+  const base = Math.floor(hundredths / count);
+  let remainder = hundredths - base * count;
+  return Array.from({ length: count }, () => {
+    const units = base + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder -= 1;
+    return units / 100;
+  });
+}
 
 function scaleRubric(
   baseWeight: number,
@@ -26,10 +35,12 @@ function scaleRubric(
   vocabularyRequirements: string,
   patternRequirements: string,
 ): AssignmentRubric {
-  const baseCriteria = standardCriteria().map((criterion) => ({
+  const standard = standardCriteria();
+  const baseWeights = distributeWeight(baseWeight, standard.length);
+  const baseCriteria = standard.map((criterion, index) => ({
     ...criterion,
     id: crypto.randomUUID(),
-    weight: Number((baseWeight / 5).toFixed(2)),
+    weight: baseWeights[index] ?? 0,
     enabled: baseWeight > 0,
     isCustom: baseWeight !== 100,
   }));
@@ -84,7 +95,8 @@ export function AdvancedAssignmentBuilderPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const teacher = user as TeacherProfile;
-  const schoolId = teacher.schoolIds[0];
+  const [schoolId, setSchoolId] = useState(teacher.schoolIds[0] ?? '');
+  const [schoolOptions, setSchoolOptions] = useState<SchoolScopeOption[] | null>(null);
 
   const [mode, setMode] = useState<'create' | 'shared'>('create');
   const [classes, setClasses] = useState<ClassMeta[] | null>(null);
@@ -114,32 +126,86 @@ export function AdvancedAssignmentBuilderPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    void fetchSchoolScopeOptions(teacher.schoolIds)
+      .then((rows) => {
+        if (cancelled) return;
+        setSchoolOptions(rows);
+        if (!schoolId && rows[0]) setSchoolId(rows[0].id);
+      })
+      .catch((error) => {
+        if (!cancelled) setMessage(error instanceof Error ? error.message : 'Okullar yüklenemedi.');
+      });
+    return () => { cancelled = true; };
+  }, [teacher.schoolIds, schoolId]);
+
+  useEffect(() => {
     if (!schoolId) return;
-    Promise.all([
+    let cancelled = false;
+    setClasses(null);
+    setShared(null);
+    setTopics(null);
+    setSelectedClasses([]);
+    setSelectedShared(null);
+    setTopicId('');
+    setMessage(null);
+
+    void Promise.all([
       fetchTeacherClasses(teacher.id),
       fetchSchoolSharedAssignments(schoolId),
       fetchVisibleCatalogForSchool(schoolId),
     ]).then(([classRows, sharedRows, topicRows]) => {
-      setClasses(classRows);
+      if (cancelled) return;
+      setClasses(classRows.filter((item) => item.schoolId === schoolId));
       setShared(sharedRows);
       setTopics(topicRows);
+    }).catch((error) => {
+      if (cancelled) return;
+      setMessage(error instanceof Error ? error.message : 'Ödev oluşturucu yüklenemedi.');
+      setClasses([]);
+      setShared([]);
+      setTopics([]);
     });
+
+    return () => { cancelled = true; };
   }, [schoolId, teacher.id]);
 
   useEffect(() => {
     if (!vocabularyRequirements.trim() && scoring.vocabulary !== 0) {
-      setScoring((current) => ({ ...current, rubric: current.rubric + current.vocabulary, vocabulary: 0 }));
+      setScoring((current) => ({
+        ...current,
+        rubric: Number((current.rubric + current.vocabulary).toFixed(2)),
+        vocabulary: 0,
+      }));
     }
   }, [vocabularyRequirements, scoring.vocabulary]);
 
   useEffect(() => {
     if (!patternRequirements.trim() && scoring.patterns !== 0) {
-      setScoring((current) => ({ ...current, rubric: current.rubric + current.patterns, patterns: 0 }));
+      setScoring((current) => ({
+        ...current,
+        rubric: Number((current.rubric + current.patterns).toFixed(2)),
+        patterns: 0,
+      }));
     }
   }, [patternRequirements, scoring.patterns]);
 
-  const totalWeight = scoring.rubric + scoring.vocabulary + scoring.patterns;
-  const canSave = title.trim() && prompt.trim() && dueAt && selectedClasses.length > 0 && totalWeight === 100 && maxPoints > 0;
+  const totalWeight = Number((scoring.rubric + scoring.vocabulary + scoring.patterns).toFixed(2));
+  const validWordRange = Number.isFinite(minWords) && Number.isFinite(maxWords) && minWords >= 1 && maxWords >= minWords;
+  const validScale = Number.isFinite(maxPoints) && maxPoints >= 1 && maxPoints <= 1000;
+  const validTimeLimit = timeLimitMinutes === undefined || (Number.isFinite(timeLimitMinutes) && timeLimitMinutes >= 1 && timeLimitMinutes <= 1440);
+  const validDueAt = Boolean(dueAt) && Number.isFinite(new Date(dueAt).getTime());
+  const canSave = Boolean(
+    schoolId
+    && title.trim()
+    && prompt.trim()
+    && validDueAt
+    && selectedClasses.length > 0
+    && totalWeight === 100
+    && validScale
+    && validWordRange
+    && validTimeLimit,
+  );
   const selectedTopic = useMemo(() => topics?.find((topic) => topic.id === topicId), [topics, topicId]);
 
   const applyTopic = (id: string) => {
@@ -161,12 +227,12 @@ export function AdvancedAssignmentBuilderPage() {
   };
 
   const setWeight = (key: keyof AdvancedScoringBreakdown, value: number) => {
-    const next = Math.max(0, Math.min(100, value));
+    const next = Number(Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0)).toFixed(2));
     setScoring((current) => ({ ...current, [key]: next }));
   };
 
   const handleSave = async (status: 'draft' | 'published') => {
-    if (!schoolId || !canSave) return;
+    if (!canSave) return;
     setSaving(true);
     setMessage(null);
     try {
@@ -177,7 +243,7 @@ export function AdvancedAssignmentBuilderPage() {
         vocabularyRequirements,
         patternRequirements,
       );
-      await createAdvancedWritingAssignment({
+      await createAdvancedWritingAssignmentAtomic({
         title: title.trim(),
         prompt: prompt.trim(),
         writingTypeId,
@@ -191,14 +257,13 @@ export function AdvancedAssignmentBuilderPage() {
         referenceText: referenceText.trim() || undefined,
         vocabularyRequirements: vocabularyRequirements.trim() || undefined,
         patternRequirements: patternRequirements.trim() || undefined,
-        maxPoints,
+        maxPoints: Number(maxPoints.toFixed(2)),
         scoringBreakdown: scoring,
         rubric,
         aiSupportMode: 'none',
         showAiScoreImmediately: showAiImmediately,
         sharedWithSchool,
         status,
-        createdBy: teacher.id,
         schoolId,
         topicId: selectedTopic?.id,
       });
@@ -216,7 +281,7 @@ export function AdvancedAssignmentBuilderPage() {
     setMessage(null);
     try {
       const count = await adoptSharedAssignment(selectedShared, selectedClasses);
-      setMessage(`${count} sınıfa atandı.`);
+      setMessage(`${count} yeni sınıfa atandı.`);
       setSelectedClasses([]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Ödev sınıflara atanamadı.');
@@ -225,11 +290,25 @@ export function AdvancedAssignmentBuilderPage() {
     }
   };
 
-  if (!classes || !shared || !topics) return <LoadingSkeleton height="14rem" />;
+  if (!schoolId && schoolOptions?.length === 0) {
+    return <div className="card card--padded"><p>Bu öğretmen hesabına bağlı bir okul bulunamadı.</p></div>;
+  }
+  if (!classes || !shared || !topics || !schoolOptions) return <LoadingSkeleton height="14rem" />;
 
   return (
     <>
       <PageHeader title="Writing ödevi oluştur" subtitle="Konu, hedef dil, puan ölçeği ve okul içi paylaşımı tek yerden yönet." />
+
+      {schoolOptions.length > 1 && (
+        <section className="card card--padded" style={{ marginBottom: 'var(--space-4)' }}>
+          <label className="field">
+            <span className="field__label">Aktif okul</span>
+            <select className="select-control" value={schoolId} onChange={(event) => setSchoolId(event.target.value)}>
+              {schoolOptions.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}
+            </select>
+          </label>
+        </section>
+      )}
 
       <div className="segmented-control" style={{ marginBottom: 'var(--space-6)' }}>
         <button type="button" className={`segmented-control__option ${mode === 'create' ? 'is-active' : ''}`} onClick={() => { setMode('create'); setSelectedClasses([]); }}>
@@ -286,11 +365,11 @@ export function AdvancedAssignmentBuilderPage() {
             <div className="assessment-field-grid">
               <div className="field assessment-field-span-2">
                 <label className="field__label" htmlFor="assignment-title">Ödev başlığı</label>
-                <input id="assignment-title" className="input-control" value={title} onChange={(event) => setTitle(event.target.value)} />
+                <input id="assignment-title" className="input-control" maxLength={300} value={title} onChange={(event) => setTitle(event.target.value)} />
               </div>
               <div className="field assessment-field-span-2">
                 <label className="field__label" htmlFor="assignment-prompt">Writing topic / prompt</label>
-                <textarea id="assignment-prompt" className="textarea-control" rows={4} value={prompt} onChange={(event) => setPrompt(event.target.value)} />
+                <textarea id="assignment-prompt" className="textarea-control" rows={4} maxLength={12000} value={prompt} onChange={(event) => setPrompt(event.target.value)} />
               </div>
               <div className="field">
                 <label className="field__label" htmlFor="writing-type">Writing türü</label>
@@ -304,13 +383,14 @@ export function AdvancedAssignmentBuilderPage() {
                   {CEFR_LEVELS.map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
               </div>
-              <div className="field"><label className="field__label" htmlFor="min-words">Min. kelime</label><input id="min-words" type="number" className="input-control" min={20} value={minWords} onChange={(event) => setMinWords(Number(event.target.value))} /></div>
-              <div className="field"><label className="field__label" htmlFor="max-words">Maks. kelime</label><input id="max-words" type="number" className="input-control" min={minWords} value={maxWords} onChange={(event) => setMaxWords(Number(event.target.value))} /></div>
+              <div className="field"><label className="field__label" htmlFor="min-words">Min. kelime</label><input id="min-words" type="number" className="input-control" min={1} max={10000} value={minWords} onChange={(event) => setMinWords(Number(event.target.value))} /></div>
+              <div className="field"><label className="field__label" htmlFor="max-words">Maks. kelime</label><input id="max-words" type="number" className="input-control" min={Math.max(1, minWords)} max={10000} value={maxWords} onChange={(event) => setMaxWords(Number(event.target.value))} /></div>
               <div className="field"><label className="field__label" htmlFor="due-at">Son teslim</label><input id="due-at" type="datetime-local" className="input-control" value={dueAt} onChange={(event) => setDueAt(event.target.value)} /></div>
-              <div className="field"><label className="field__label" htmlFor="time-limit">Süre (dakika, opsiyonel)</label><input id="time-limit" type="number" className="input-control" min={1} value={timeLimitMinutes ?? ''} onChange={(event) => setTimeLimitMinutes(event.target.value ? Number(event.target.value) : undefined)} /></div>
+              <div className="field"><label className="field__label" htmlFor="time-limit">Süre (dakika, opsiyonel)</label><input id="time-limit" type="number" className="input-control" min={1} max={1440} value={timeLimitMinutes ?? ''} onChange={(event) => setTimeLimitMinutes(event.target.value ? Number(event.target.value) : undefined)} /></div>
               <div className="field assessment-field-span-2"><label className="field__label" htmlFor="instructions">Ek yönergeler</label><textarea id="instructions" className="textarea-control" rows={2} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></div>
               <div className="field assessment-field-span-2"><label className="field__label" htmlFor="reference">Referans metin (opsiyonel)</label><textarea id="reference" className="textarea-control" rows={2} value={referenceText} onChange={(event) => setReferenceText(event.target.value)} /></div>
             </div>
+            {!validWordRange && <p className="field__error">Maksimum kelime sayısı minimumdan küçük olamaz.</p>}
           </section>
 
           <section className="assessment-two-column">
@@ -337,7 +417,7 @@ export function AdvancedAssignmentBuilderPage() {
               <span className="field__label">Kaç üzerinden?</span>
               <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
                 {QUICK_SCALES.map((scale) => <button key={scale} type="button" className={`btn btn--sm ${maxPoints === scale ? 'btn--primary' : 'btn--secondary'}`} onClick={() => setMaxPoints(scale)}>{scale}</button>)}
-                <input aria-label="Özel puan ölçeği" type="number" className="input-control" style={{ width: 110 }} min={1} max={1000} value={maxPoints} onChange={(event) => setMaxPoints(Number(event.target.value))} />
+                <input aria-label="Özel puan ölçeği" type="number" className="input-control" style={{ width: 110 }} min={1} max={1000} step={0.01} value={maxPoints} onChange={(event) => setMaxPoints(Number(event.target.value))} />
               </div>
             </div>
             <WeightControl label="Temel writing rubriği" value={scoring.rubric} onChange={(value) => setWeight('rubric', value)} />
@@ -370,6 +450,7 @@ function ClassPicker({ classes, selected, onToggle }: { classes: ClassMeta[]; se
   return (
     <section className="card card--padded assessment-form-section">
       <h2>Sınıflar</h2>
+      {classes.length === 0 && <p className="field__hint">Bu okulda sana atanmış sınıf bulunmuyor.</p>}
       <div className="assessment-class-grid">
         {classes.map((item) => (
           <label key={item.id} className={`assessment-class-choice ${selected.includes(item.id) ? 'is-selected' : ''}`}>
@@ -406,8 +487,8 @@ function WeightControl({ label, value, disabled = false, onChange }: { label: st
   return (
     <div className={`assessment-weight-row ${disabled ? 'is-disabled' : ''}`}>
       <div><strong>{label}</strong><span>%{value}</span></div>
-      <input type="range" min={0} max={100} step={5} value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
-      <input type="number" min={0} max={100} className="input-control" value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+      <input type="range" min={0} max={100} step={1} value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+      <input type="number" min={0} max={100} step={0.01} className="input-control" value={value} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
     </div>
   );
 }
