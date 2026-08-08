@@ -4,8 +4,8 @@ import { z, ZodError } from 'zod';
 import {
   configureMistralKey,
   getIntegrationStatus,
-  processDocumentOcr,
 } from './documentAssessment.ts';
+import { processDocumentOcrSecure } from './secureDocumentOcr.ts';
 import { gradeExamAttemptSecure } from './secureExamGrading.ts';
 
 interface RouteDeps {
@@ -55,9 +55,10 @@ function errorStatus(message: string): number {
   if (message.includes('not_found')) return 404;
   if (message.includes('not_configured') || message.includes('template_not_ready')) return 503;
   if (message.includes('temporarily_unavailable')) return 503;
+  if (message.includes('timeout') || message.includes('network_failed')) return 503;
   if (message.includes('too_large')) return 413;
-  if (message.includes('already_running') || message.includes('cannot_start_grading')) return 409;
-  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed') || message.includes('scale_too_small')) return 400;
+  if (message.includes('already_running') || message.includes('cannot_start') || message.includes('not_processing')) return 409;
+  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed') || message.includes('scale_too_small') || message.includes('mime_mismatch')) return 400;
   return 502;
 }
 
@@ -88,7 +89,7 @@ export function registerDocumentAssessmentRoutes(app: express.Express, deps: Rou
   app.post('/api/documents/ocr', documentLimiter, async (req, res) => {
     try {
       const body = ocrSchema.parse(req.body);
-      res.json(await processDocumentOcr(req.headers.authorization, body, deps));
+      res.json(await processDocumentOcrSecure(req.headers.authorization, body, deps));
     } catch (error) {
       if (error instanceof ZodError) {
         res.status(400).json({ error: 'Invalid request body', details: error.issues });
