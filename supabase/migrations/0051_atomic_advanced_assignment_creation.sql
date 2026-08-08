@@ -178,18 +178,18 @@ begin
   if v_class_count < 1 or v_class_count > 200 then
     raise exception 'assignment_class_required' using errcode = '22023';
   end if;
-  if (select count(distinct id) from unnest(p_class_ids) id) <> v_class_count then
+  if (select count(distinct u.class_id) from unnest(p_class_ids) as u(class_id)) <> v_class_count then
     raise exception 'duplicate_assignment_class' using errcode = '22023';
   end if;
 
   if exists (
     select 1
-    from unnest(p_class_ids) class_id
+    from unnest(p_class_ids) as u(class_id)
     where not exists (
       select 1
       from public.school_classes c
       join public.teacher_classes tc on tc.class_id = c.id
-      where c.id = class_id
+      where c.id = u.class_id
         and c.school_id = p_school_id
         and tc.teacher_id = auth.uid()
     )
@@ -260,8 +260,8 @@ begin
   ) returning id into v_assignment_id;
 
   insert into public.assignment_classes (assignment_id, class_id)
-  select v_assignment_id, class_id
-  from unnest(p_class_ids) class_id;
+  select v_assignment_id, u.class_id
+  from unnest(p_class_ids) as u(class_id);
 
   return v_assignment_id;
 end;
