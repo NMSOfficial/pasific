@@ -55,15 +55,30 @@ const gradeItemSchema = z.object({
 });
 
 function errorStatus(message: string): number {
-  if (message === 'Unauthorized') return 401;
-  if (message === 'Forbidden' || message.includes('mismatch') || message.includes('teacher_required')) return 403;
+  if (message === 'Unauthorized' || message.includes('not_authenticated')) return 401;
+  if (
+    message.includes('Forbidden')
+    || message.includes('mismatch')
+    || message.includes('teacher_required')
+    || message.includes('owner_required')
+    || message.includes('not_shared_with_teacher')
+    || message.includes('not_taught_by_teacher')
+  ) return 403;
   if (message.includes('not_found')) return 404;
   if (message.includes('not_configured') || message.includes('template_not_ready')) return 503;
   if (message.includes('temporarily_unavailable')) return 503;
   if (message.includes('timeout') || message.includes('network_failed')) return 503;
   if (message.includes('too_large')) return 413;
   if (message.includes('already_running') || message.includes('cannot_start') || message.includes('not_processing')) return 409;
-  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed') || message.includes('scale_too_small') || message.includes('mime_mismatch') || message.includes('not_ready')) return 400;
+  if (
+    message.includes('unsupported')
+    || message.includes('invalid')
+    || message.includes('must_be_https')
+    || message.includes('not_allowed')
+    || message.includes('scale_too_small')
+    || message.includes('mime_mismatch')
+    || message.includes('not_ready')
+  ) return 400;
   return 502;
 }
 
