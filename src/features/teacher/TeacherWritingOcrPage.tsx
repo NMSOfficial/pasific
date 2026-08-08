@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileSearch, RefreshCw, ScanText } from 'lucide-react';
+import { FileSearch, RefreshCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DocumentImportControls } from '../../components/DocumentImportControls';
 import { LoadingSkeleton } from '../../components/LoadingSkeleton';
