@@ -149,13 +149,188 @@
 .student-exam-card__body { border-top: 1px solid var(--color-border); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-5); }
 .student-appeal-section { display: flex; flex-direction: column; gap: var(--space-3); border-top: 1px solid var(--color-border); padding-top: var(--space-4); }
 
+/* Staged exam workflow */
+.exam-flow-steps {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+.exam-flow-step {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.exam-flow-step > span, .exam-step-number {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: var(--weight-bold);
+}
+.exam-flow-step > div, .exam-section-heading > div { display: flex; flex-direction: column; gap: 2px; }
+.exam-flow-step small, .exam-section-heading p { color: var(--color-text-muted); }
+.exam-school-filter, .assignment-school-row { margin-bottom: var(--space-5); }
+.exam-school-filter .field, .assignment-school-row .field { max-width: 26rem; }
+.exam-definition-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr)); gap: var(--space-4); }
+.exam-definition-card { display: flex; flex-direction: column; gap: var(--space-5); }
+.exam-definition-card__header { display: flex; justify-content: space-between; gap: var(--space-3); align-items: flex-start; }
+.exam-definition-card__header h2 { margin-top: 4px; font-size: var(--text-xl); }
+.exam-definition-card__eyebrow { color: var(--color-text-muted); font-size: var(--text-sm); }
+.exam-reference-status { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.exam-reference-status > div { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-2); align-items: center; padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.exam-reference-status > div.is-ready { border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border)); background: var(--color-success-soft); }
+.exam-reference-status span { display: flex; flex-direction: column; gap: 2px; }
+.exam-reference-status small { color: var(--color-text-muted); }
+.exam-definition-card__actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: auto; }
+.btn.is-disabled { opacity: 0.48; pointer-events: none; }
+.exam-empty-state { min-height: 18rem; display: grid; place-items: center; align-content: center; text-align: center; gap: var(--space-3); color: var(--color-text-muted); }
+.exam-empty-state h2 { color: var(--color-text); }
+
+.exam-setup-layout { max-width: 66rem; margin: 0 auto; }
+.exam-setup-main { display: flex; flex-direction: column; gap: var(--space-5); }
+.exam-section-heading { display: flex; gap: var(--space-3); align-items: flex-start; }
+.exam-section-heading h2 { margin: 0; }
+.exam-rule-examples { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.exam-rule-examples span { padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-text-muted); font-size: var(--text-sm); background: var(--color-surface-alt); }
+.exam-save-row { display: flex; justify-content: flex-end; }
+.exam-reference-panel { border-left: 4px solid var(--color-primary); }
+.exam-reference-panel__status { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.exam-reference-panel__status.is-ready { background: var(--color-success-soft); border-color: color-mix(in srgb, var(--color-success) 45%, var(--color-border)); }
+.exam-reference-panel__status > div { display: flex; align-items: center; gap: var(--space-2); }
+.exam-reference-panel__status .field__error { flex-basis: 100%; margin: 0; }
+.exam-reference-dot { width: 0.65rem; height: 0.65rem; border-radius: 999px; background: var(--color-border-strong); }
+.exam-ready-callout, .exam-review-callout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+.exam-ready-callout.is-ready, .exam-review-callout { background: var(--color-success-soft); border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border)); }
+.exam-ready-callout > div, .exam-review-callout > div { display: flex; align-items: center; gap: var(--space-3); }
+.exam-ready-callout > div > div, .exam-review-callout > div > div { display: flex; flex-direction: column; gap: 2px; }
+.exam-ready-callout small, .exam-review-callout small { color: var(--color-text-muted); }
+.exam-page-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.exam-grading-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-4); }
+.exam-grading-summary > div { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; align-items: center; gap: var(--space-3); background: var(--color-surface); }
+.exam-grading-summary > div.is-ready { background: var(--color-success-soft); }
+.exam-grading-summary span { display: flex; flex-direction: column; gap: 2px; }
+.exam-grading-summary small { color: var(--color-text-muted); }
+.exam-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+.exam-stat-grid > div { display: flex; flex-direction: column; gap: 2px; }
+.exam-stat-grid strong { font-size: var(--text-2xl); }
+.exam-stat-grid span { color: var(--color-text-muted); font-size: var(--text-sm); }
+.exam-workflow-message { margin-block: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); background: var(--color-surface-alt); border-radius: var(--radius-md); color: var(--color-text); overflow-wrap: anywhere; }
+.exam-paper-list-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.exam-paper-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.exam-paper-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+.exam-paper-card.has-error { border-color: color-mix(in srgb, var(--color-error) 55%, var(--color-border)); }
+.exam-paper-card__top { display: flex; justify-content: space-between; gap: var(--space-3); align-items: flex-start; }
+.exam-paper-card__top > div { display: flex; flex-direction: column; gap: 3px; }
+.exam-paper-card__top small { color: var(--color-text-muted); }
+.exam-paper-card__actions { display: grid; grid-template-columns: minmax(14rem, 1fr) auto; gap: var(--space-3); align-items: center; }
+.exam-ocr-suggestion { font-size: var(--text-sm); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-info-soft); }
+.exam-paper-score-preview { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-primary-soft); }
+.exam-paper-score-preview span { color: var(--color-text-muted); font-size: var(--text-sm); }
+.exam-review-callout { margin-top: var(--space-5); }
+.writing-ocr-flow { display: flex; flex-direction: column; gap: var(--space-5); }
+@keyframes assessment-spin { to { transform: rotate(360deg); } }
+.spin { animation: assessment-spin 1s linear infinite; }
+
+/* Assignment wizard */
+.assignment-mode-tabs { margin-bottom: var(--space-5); }
+.assignment-wizard-shell { display: flex; flex-direction: column; gap: var(--space-4); }
+.assignment-stepper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.assignment-stepper button { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); padding: var(--space-3); display: flex; align-items: center; gap: var(--space-3); text-align: left; cursor: pointer; }
+.assignment-stepper button > span { width: 1.8rem; height: 1.8rem; border-radius: 999px; display: grid; place-items: center; background: var(--color-surface-alt); color: var(--color-text-muted); font-weight: var(--weight-bold); }
+.assignment-stepper button > div { display: flex; flex-direction: column; min-width: 0; }
+.assignment-stepper small { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assignment-stepper button.is-active { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.assignment-stepper button.is-active > span { background: var(--color-primary); color: white; }
+.assignment-stepper button.is-complete > span { background: var(--color-success); color: white; }
+.assignment-wizard-body { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: var(--space-5); align-items: start; }
+.assignment-wizard-main { min-width: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.assignment-step-card { min-height: 27rem; }
+.assignment-step-kicker { display: inline-block; color: var(--color-primary); font-size: var(--text-xs); font-weight: var(--weight-bold); letter-spacing: 0.08em; margin-bottom: var(--space-1); }
+.assignment-wizard-summary { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4); }
+.assignment-wizard-summary h3 { font-size: var(--text-lg); overflow-wrap: anywhere; }
+.assignment-wizard-summary dl { display: flex; flex-direction: column; gap: var(--space-2); }
+.assignment-wizard-summary dl div { display: flex; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+.assignment-wizard-summary dt { color: var(--color-text-muted); }
+.assignment-wizard-summary dd { margin: 0; text-align: right; font-weight: var(--weight-semibold); }
+.assignment-summary-checks { display: flex; flex-direction: column; gap: var(--space-2); }
+.assignment-summary-checks span { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); }
+.assignment-summary-checks span.is-ok { color: var(--color-success); }
+.assignment-language-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.assignment-language-grid > section > div:first-child { display: flex; align-items: center; gap: var(--space-2); }
+.assignment-language-wide { grid-column: 1 / -1; }
+.assignment-scale-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.assignment-scale-row .input-control { width: 8rem; }
+.assignment-score-preview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+.assignment-score-preview > div { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-1); }
+.assignment-score-preview > div.is-disabled { opacity: 0.45; }
+.assignment-score-preview > div.is-total { background: var(--color-success-soft); color: var(--color-success); }
+.assignment-score-preview span { font-size: var(--text-xl); font-weight: var(--weight-bold); }
+.assignment-extra-weight { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(12rem, 2fr) 5.5rem; align-items: center; gap: var(--space-3); }
+.assignment-extra-weight > div { display: flex; justify-content: space-between; gap: var(--space-2); }
+.assignment-extra-weight input[type='range'] { width: 100%; accent-color: var(--color-primary); }
+.assignment-extra-weight.is-disabled { opacity: 0.45; }
+.assignment-final-grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: var(--space-4); }
+.assignment-wizard-footer { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) 0 var(--space-6); position: sticky; bottom: 0; z-index: 5; background: linear-gradient(to bottom, transparent, var(--color-bg) 24%); padding-top: var(--space-6); }
+.assignment-publish-actions { display: flex; gap: var(--space-2); margin-left: auto; }
+.assignment-shared-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr); gap: var(--space-4); align-items: start; }
+.assignment-shared-layout .assignment-wizard-footer { grid-column: 1 / -1; }
+.assignment-template-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.assignment-template-card { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); text-align: left; padding: var(--space-4); cursor: pointer; display: flex; flex-direction: column; gap: var(--space-2); }
+.assignment-template-card > div { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); }
+.assignment-template-card small { color: var(--color-text-muted); }
+.assignment-template-card p { margin: 0; }
+.assignment-template-card.is-selected { border-color: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-soft); }
+
+@media (max-width: 980px) {
+  .assignment-wizard-body { grid-template-columns: 1fr; }
+  .assignment-wizard-summary { position: static; order: -1; }
+  .assignment-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .exam-grading-summary { grid-template-columns: 1fr; }
+  .exam-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 800px) {
   .assessment-two-column, .assessment-field-grid { grid-template-columns: 1fr; }
   .assessment-field-span-2 { grid-column: span 1; }
   .assessment-weight-row { grid-template-columns: 1fr 5rem; }
   .assessment-weight-row input[type='range'] { grid-column: 1 / -1; grid-row: 2; }
-  .document-cloud-row, .assessment-review-summary { flex-direction: column; }
+  .document-cloud-row, .assessment-review-summary { flex-direction: column; align-items: stretch; }
   .ocr-item-card__actions, .assessment-return-group { grid-template-columns: 1fr; }
   .assessment-question-card__head { flex-direction: column; }
   .assessment-score-editor { width: 100%; }
+  .exam-flow-steps { grid-template-columns: 1fr; }
+  .exam-flow-steps > svg { transform: rotate(90deg); justify-self: center; }
+  .exam-reference-status, .exam-paper-card__actions, .assignment-language-grid, .assignment-final-grid, .assignment-shared-layout { grid-template-columns: 1fr; }
+  .assignment-language-wide { grid-column: auto; }
+  .assignment-score-preview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .exam-paper-list-heading, .exam-paper-card__top, .exam-ready-callout, .exam-review-callout, .exam-paper-score-preview { flex-direction: column; align-items: stretch; }
+  .assignment-extra-weight { grid-template-columns: 1fr 5.5rem; }
+  .assignment-extra-weight input[type='range'] { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (max-width: 560px) {
+  .assignment-stepper { grid-template-columns: 1fr; }
+  .assignment-stepper small { white-space: normal; }
+  .exam-stat-grid, .assignment-score-preview { grid-template-columns: 1fr 1fr; }
+  .assignment-wizard-footer { flex-wrap: wrap; }
+  .assignment-publish-actions { width: 100%; margin-left: 0; display: grid; grid-template-columns: 1fr 1fr; }
 }

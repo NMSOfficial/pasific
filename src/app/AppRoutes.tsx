@@ -44,11 +44,14 @@ const ClassListPage = lazyNamed(() => import('../features/teacher/ClassListPage'
 const ClassDetailPage = lazyNamed(() => import('../features/teacher/ClassDetailPage'), 'ClassDetailPage');
 const StudentDetailPage = lazyNamed(() => import('../features/teacher/StudentDetailPage'), 'StudentDetailPage');
 const TeacherAssignmentListPage = lazyNamed(() => import('../features/teacher/TeacherAssignmentListPage'), 'TeacherAssignmentListPage');
-const AdvancedAssignmentBuilderPage = lazyNamed(() => import('../features/teacher/AdvancedAssignmentBuilderPage'), 'AdvancedAssignmentBuilderPage');
+const TeacherAssignmentWizardPage = lazyNamed(() => import('../features/teacher/TeacherAssignmentWizardPage'), 'TeacherAssignmentWizardPage');
 const TeacherAssignmentDetailPage = lazyNamed(() => import('../features/teacher/TeacherAssignmentDetailPage'), 'TeacherAssignmentDetailPage');
 const AssignmentResultsPage = lazyNamed(() => import('../features/teacher/AssignmentResultsPage'), 'AssignmentResultsPage');
 const TeacherSubmissionReviewPage = lazyNamed(() => import('../features/teacher/TeacherSubmissionReviewPage'), 'TeacherSubmissionReviewPage');
-const DocumentAssessmentHubPage = lazyNamed(() => import('../features/teacher/DocumentAssessmentHubPage'), 'DocumentAssessmentHubPage');
+const TeacherWritingOcrPage = lazyNamed(() => import('../features/teacher/TeacherWritingOcrPage'), 'TeacherWritingOcrPage');
+const TeacherExamListPage = lazyNamed(() => import('../features/teacher/TeacherExamListPage'), 'TeacherExamListPage');
+const TeacherExamSetupPage = lazyNamed(() => import('../features/teacher/TeacherExamSetupPage'), 'TeacherExamSetupPage');
+const TeacherExamGradingPage = lazyNamed(() => import('../features/teacher/TeacherExamGradingPage'), 'TeacherExamGradingPage');
 const TeacherExamReviewPage = lazyNamed(() => import('../features/teacher/TeacherExamReviewPage'), 'TeacherExamReviewPage');
 const SchoolCatalogPage = lazyNamed(() => import('../features/teacher/SchoolCatalogPage'), 'SchoolCatalogPage');
 const TeacherReportsPage = lazyNamed(() => import('../features/teacher/TeacherReportsPage'), 'TeacherReportsPage');
@@ -72,11 +75,7 @@ const AdminAuditLogPage = lazyNamed(() => import('../features/admin/AdminAuditLo
 const AdminSettingsPage = lazyNamed(() => import('../features/admin/AdminSettingsPage'), 'AdminSettingsPage');
 
 function RouteFallback() {
-  return (
-    <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 'var(--space-6)' }}>
-      <LoadingSkeleton width="12rem" height="1rem" />
-    </div>
-  );
+  return <div style={{ minHeight: '40vh', display: 'grid', placeItems: 'center', padding: 'var(--space-6)' }}><LoadingSkeleton width="12rem" height="1rem" /></div>;
 }
 
 export function AppRoutes() {
@@ -89,14 +88,7 @@ export function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-        <Route
-          path="/student"
-          element={
-            <RoleGuard allow={['student']}>
-              <AppShell sidebarItems={STUDENT_SIDEBAR_NAV} bottomNavItems={STUDENT_BOTTOM_NAV} />
-            </RoleGuard>
-          }
-        >
+        <Route path="/student" element={<RoleGuard allow={['student']}><AppShell sidebarItems={STUDENT_SIDEBAR_NAV} bottomNavItems={STUDENT_BOTTOM_NAV} /></RoleGuard>}>
           <Route path="home" element={<StudentHomePage />} />
           <Route path="assignments" element={<AssignmentListPage />} />
           <Route path="assignments/:assignmentId" element={<AssignmentDetailPage />} />
@@ -115,25 +107,22 @@ export function AppRoutes() {
           <Route path="settings" element={<StudentSettingsPage />} />
         </Route>
 
-        <Route
-          path="/teacher"
-          element={
-            <RoleGuard allow={['teacher']}>
-              <AppShell sidebarItems={TEACHER_SIDEBAR_NAV} bottomNavItems={TEACHER_BOTTOM_NAV} />
-            </RoleGuard>
-          }
-        >
+        <Route path="/teacher" element={<RoleGuard allow={['teacher']}><AppShell sidebarItems={TEACHER_SIDEBAR_NAV} bottomNavItems={TEACHER_BOTTOM_NAV} /></RoleGuard>}>
           <Route path="dashboard" element={<TeacherDashboardPage />} />
           <Route path="classes" element={<ClassListPage />} />
           <Route path="classes/:classId" element={<ClassDetailPage />} />
           <Route path="students/:studentId" element={<StudentDetailPage />} />
           <Route path="students/:studentId/portfolio" element={<StudentDetailPage portfolioTab />} />
           <Route path="assignments" element={<TeacherAssignmentListPage />} />
-          <Route path="assignments/new" element={<AdvancedAssignmentBuilderPage />} />
+          <Route path="assignments/new" element={<TeacherAssignmentWizardPage />} />
           <Route path="assignments/:assignmentId" element={<TeacherAssignmentDetailPage />} />
           <Route path="assignments/:assignmentId/results" element={<AssignmentResultsPage />} />
           <Route path="submissions/:submissionId" element={<TeacherSubmissionReviewPage />} />
-          <Route path="assessment-hub" element={<DocumentAssessmentHubPage />} />
+          <Route path="assessment-hub" element={<TeacherWritingOcrPage />} />
+          <Route path="exams" element={<TeacherExamListPage />} />
+          <Route path="exams/new" element={<TeacherExamSetupPage />} />
+          <Route path="exams/:examId/setup" element={<TeacherExamSetupPage />} />
+          <Route path="exams/:examId/grade" element={<TeacherExamGradingPage />} />
           <Route path="exams/:examId/attempts/:attemptId" element={<TeacherExamReviewPage />} />
           <Route path="catalog" element={<SchoolCatalogPage />} />
           <Route path="examples" element={<ExampleLibraryPage basePath="/teacher" />} />
@@ -146,14 +135,7 @@ export function AppRoutes() {
           <Route path="menu" element={<TeacherMobileMenuPage />} />
         </Route>
 
-        <Route
-          path="/admin"
-          element={
-            <RoleGuard allow={['super_admin']}>
-              <AppShell sidebarItems={ADMIN_SIDEBAR_NAV} />
-            </RoleGuard>
-          }
-        >
+        <Route path="/admin" element={<RoleGuard allow={['super_admin']}><AppShell sidebarItems={ADMIN_SIDEBAR_NAV} /></RoleGuard>}>
           <Route path="dashboard" element={<AdminDashboardPage />} />
           <Route path="schools" element={<AdminSchoolListPage />} />
           <Route path="schools/:schoolId" element={<AdminSchoolDetailPage />} />

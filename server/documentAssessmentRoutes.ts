@@ -6,7 +6,7 @@ import {
   getIntegrationStatus,
 } from './documentAssessment.ts';
 import { processDocumentOcrSecure } from './secureDocumentOcr.ts';
-import { gradeExamAttemptSecure } from './secureExamGrading.ts';
+import { createAndGradeExamItemSecure, gradeExamAttemptSecure } from './secureExamGrading.ts';
 
 interface RouteDeps {
   supabaseUrl: string;
@@ -48,17 +48,37 @@ const ocrSchema = z.object({
 
 const mistralKeySchema = z.object({ apiKey: z.string().trim().min(16).max(500) });
 const attemptIdSchema = z.string().uuid();
+const gradeItemSchema = z.object({
+  itemId: z.string().uuid(),
+  examId: z.string().uuid(),
+  studentId: z.string().uuid(),
+});
 
 function errorStatus(message: string): number {
-  if (message === 'Unauthorized') return 401;
-  if (message === 'Forbidden') return 403;
+  if (message === 'Unauthorized' || message.includes('not_authenticated')) return 401;
+  if (
+    message.includes('Forbidden')
+    || message.includes('mismatch')
+    || message.includes('teacher_required')
+    || message.includes('owner_required')
+    || message.includes('not_shared_with_teacher')
+    || message.includes('not_taught_by_teacher')
+  ) return 403;
   if (message.includes('not_found')) return 404;
   if (message.includes('not_configured') || message.includes('template_not_ready')) return 503;
   if (message.includes('temporarily_unavailable')) return 503;
   if (message.includes('timeout') || message.includes('network_failed')) return 503;
   if (message.includes('too_large')) return 413;
   if (message.includes('already_running') || message.includes('cannot_start') || message.includes('not_processing')) return 409;
-  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed') || message.includes('scale_too_small') || message.includes('mime_mismatch')) return 400;
+  if (
+    message.includes('unsupported')
+    || message.includes('invalid')
+    || message.includes('must_be_https')
+    || message.includes('not_allowed')
+    || message.includes('scale_too_small')
+    || message.includes('mime_mismatch')
+    || message.includes('not_ready')
+  ) return 400;
   return 502;
 }
 
@@ -97,6 +117,27 @@ export function registerDocumentAssessmentRoutes(app: express.Express, deps: Rou
       }
       const message = error instanceof Error ? error.message : 'ocr_failed';
       console.error('[ocr] request failed:', message);
+      res.status(errorStatus(message)).json({ error: message });
+    }
+  });
+
+  app.post('/api/exam-items/grade', documentLimiter, async (req, res) => {
+    try {
+      const body = gradeItemSchema.parse(req.body);
+      res.json(await createAndGradeExamItemSecure(
+        req.headers.authorization,
+        body.itemId,
+        body.examId,
+        body.studentId,
+        deps,
+      ));
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ error: 'Invalid exam grading request' });
+        return;
+      }
+      const message = error instanceof Error ? error.message : 'exam_grading_failed';
+      console.error('[exam-item-grading] request failed:', message);
       res.status(errorStatus(message)).json({ error: message });
     }
   });
