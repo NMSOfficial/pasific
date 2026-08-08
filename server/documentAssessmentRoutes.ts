@@ -4,9 +4,9 @@ import { z, ZodError } from 'zod';
 import {
   configureMistralKey,
   getIntegrationStatus,
-  gradeExamAttempt,
   processDocumentOcr,
 } from './documentAssessment.ts';
+import { gradeExamAttemptSecure } from './secureExamGrading.ts';
 
 interface RouteDeps {
   supabaseUrl: string;
@@ -56,7 +56,8 @@ function errorStatus(message: string): number {
   if (message.includes('not_configured') || message.includes('template_not_ready')) return 503;
   if (message.includes('temporarily_unavailable')) return 503;
   if (message.includes('too_large')) return 413;
-  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed')) return 400;
+  if (message.includes('already_running') || message.includes('cannot_start_grading')) return 409;
+  if (message.includes('unsupported') || message.includes('invalid') || message.includes('must_be_https') || message.includes('not_allowed') || message.includes('scale_too_small')) return 400;
   return 502;
 }
 
@@ -102,7 +103,7 @@ export function registerDocumentAssessmentRoutes(app: express.Express, deps: Rou
   app.post('/api/exam-attempts/:attemptId/grade', documentLimiter, async (req, res) => {
     try {
       const attemptId = attemptIdSchema.parse(req.params.attemptId);
-      res.json(await gradeExamAttempt(req.headers.authorization, attemptId, deps));
+      res.json(await gradeExamAttemptSecure(req.headers.authorization, attemptId, deps));
     } catch (error) {
       if (error instanceof ZodError) {
         res.status(400).json({ error: 'Invalid attempt ID' });
