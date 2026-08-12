@@ -37,11 +37,21 @@ async function attachStudentIds(classes: Record<string, unknown>[]): Promise<Cla
   }));
 }
 
+/**
+ * Every class in the teacher's own school(s) — not just ones explicitly
+ * linked via teacher_classes. That table only ever gets a row when a
+ * teacher creates a class themselves (create_class_for_teacher); a class
+ * created by an admin (or by a colleague) was otherwise invisible to every
+ * other teacher at the school, even though they have full permissions
+ * there. RLS already allows this (school_classes is readable by any
+ * is_teacher_of_school(school_id)) — this was purely a client-side filter
+ * that was narrower than the actual access model.
+ */
 export async function fetchTeacherClasses(teacherId: string): Promise<ClassMeta[]> {
-  const { data: links } = await supabase.from('teacher_classes').select('class_id').eq('teacher_id', teacherId);
-  const classIds = (links ?? []).map((r) => r.class_id as string);
-  if (!classIds.length) return [];
-  const { data: classes } = await supabase.from('school_classes').select('*').in('id', classIds);
+  const { data: schoolLinks } = await supabase.from('teacher_schools').select('school_id').eq('teacher_id', teacherId);
+  const schoolIds = (schoolLinks ?? []).map((r) => r.school_id as string);
+  if (!schoolIds.length) return [];
+  const { data: classes } = await supabase.from('school_classes').select('*').in('school_id', schoolIds);
   return attachStudentIds(classes ?? []);
 }
 

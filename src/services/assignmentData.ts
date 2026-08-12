@@ -63,16 +63,13 @@ async function mapAssignment(row: Record<string, unknown>): Promise<Assignment> 
   };
 }
 
+/** Every assignment in the teacher's own school(s) — see fetchTeacherClasses (teacherData.ts) for why this isn't scoped via teacher_classes. */
 export async function fetchAssignmentsForTeacher(teacherId: string): Promise<Assignment[]> {
-  const { data: classLinks } = await supabase.from('teacher_classes').select('class_id').eq('teacher_id', teacherId);
-  const classIds = (classLinks ?? []).map((c) => c.class_id as string);
-  if (!classIds.length) return [];
+  const { data: schoolLinks } = await supabase.from('teacher_schools').select('school_id').eq('teacher_id', teacherId);
+  const schoolIds = (schoolLinks ?? []).map((r) => r.school_id as string);
+  if (!schoolIds.length) return [];
 
-  const { data: assignmentLinks } = await supabase.from('assignment_classes').select('assignment_id').in('class_id', classIds);
-  const assignmentIds = [...new Set((assignmentLinks ?? []).map((a) => a.assignment_id as string))];
-  if (!assignmentIds.length) return [];
-
-  const { data: rows } = await supabase.from('assignments').select('*').in('id', assignmentIds);
+  const { data: rows } = await supabase.from('assignments').select('*').in('school_id', schoolIds);
   return Promise.all((rows ?? []).map(mapAssignment));
 }
 

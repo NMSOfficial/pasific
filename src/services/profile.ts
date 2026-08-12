@@ -38,17 +38,22 @@ export async function fetchAppUser(userId: string): Promise<AppUser | null> {
   }
 
   if (profile.role === 'teacher') {
-    const [{ data: schoolRows }, { data: classRows }, { data: permRows }] = await Promise.all([
+    const [{ data: schoolRows }, { data: permRows }] = await Promise.all([
       supabase.from('teacher_schools').select('school_id').eq('teacher_id', userId),
-      supabase.from('teacher_classes').select('class_id').eq('teacher_id', userId),
       supabase.from('teacher_permissions').select('permission').eq('teacher_id', userId),
     ]);
+    const schoolIds = (schoolRows ?? []).map((r) => r.school_id as string);
+    // Every class in the teacher's school(s), not just ones explicitly
+    // linked via teacher_classes — see fetchTeacherClasses (teacherData.ts).
+    const { data: classRows } = schoolIds.length
+      ? await supabase.from('school_classes').select('id').in('school_id', schoolIds)
+      : { data: [] as { id: string }[] };
 
     return {
       ...base,
       role: 'teacher',
-      schoolIds: (schoolRows ?? []).map((r) => r.school_id as string),
-      classIds: (classRows ?? []).map((r) => r.class_id as string),
+      schoolIds,
+      classIds: (classRows ?? []).map((r) => r.id as string),
       permissions: (permRows ?? []).map((r) => r.permission as TeacherPermissionKey),
       title: (profile.title as string | null) ?? undefined,
     };
