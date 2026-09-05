@@ -1,6 +1,9 @@
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path("tokenizer-hub").resolve()))
 
 from tokenizers import Tokenizer as HfTokenizer
 from backend.app.tokenizer_registry import TokenizerSpec, TiktokenBackendTokenizer, HfBackendTokenizer, HfTiktokenBackendTokenizer
